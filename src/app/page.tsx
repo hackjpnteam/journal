@@ -53,6 +53,7 @@ export default function HomePage() {
   const [coachingNote, setCoachingNote] = useState<CoachingNote | null>(null)
   const [weeklyOKR, setWeeklyOKR] = useState<OKRData | null>(null)
   const [loading, setLoading] = useState(true)
+  const [deleting, setDeleting] = useState<string | null>(null)
 
   const today = format(new Date(), 'yyyy年M月d日（E）', { locale: ja })
   const currentHour = new Date().getHours()
@@ -102,6 +103,27 @@ export default function HomePage() {
       fetchData()
     }
   }, [session])
+
+  const handleDeletePost = async (postId: string, postType: string) => {
+    if (!confirm('この投稿を削除しますか？')) return
+
+    setDeleting(postId)
+    try {
+      const res = await fetch(`/api/admin/delete-post?id=${postId}&type=${postType}`, {
+        method: 'DELETE',
+      })
+      if (res.ok) {
+        setTimeline(prev => prev.filter(item => item.id !== postId))
+      } else {
+        const data = await res.json()
+        alert(data.error || '削除に失敗しました')
+      }
+    } catch {
+      alert('エラーが発生しました')
+    } finally {
+      setDeleting(null)
+    }
+  }
 
   const getGreeting = () => {
     if (currentHour < 12) return 'おはようございます'
@@ -321,6 +343,19 @@ export default function HomePage() {
                       {item.identityFocus && (
                         <p className="text-sm text-blue-600">Identity: {item.identityFocus}</p>
                       )}
+                    </div>
+                  )}
+
+                  {/* superadmin用削除ボタン */}
+                  {session?.user?.role === 'superadmin' && (
+                    <div className="mt-3 pt-3 border-t border-[#d46a7e]/20">
+                      <button
+                        onClick={() => handleDeletePost(item.id, item.type)}
+                        disabled={deleting === item.id}
+                        className="text-xs text-red-500 hover:text-red-700 disabled:opacity-50"
+                      >
+                        {deleting === item.id ? '削除中...' : '🗑️ この投稿を削除'}
+                      </button>
                     </div>
                   )}
                 </Card>
