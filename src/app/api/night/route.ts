@@ -12,6 +12,7 @@ const nightJournalSchema = z.object({
   moodReflection: z.string().optional(),
   learning: z.string().optional(),
   tomorrowMessage: z.string().optional(),
+  selfScore: z.number().min(1).max(10).optional(),
   isShared: z.boolean().default(false),
 })
 
@@ -50,6 +51,7 @@ export async function GET(req: NextRequest) {
             moodReflection: myJournal.moodReflection,
             learning: myJournal.learning,
             tomorrowMessage: myJournal.tomorrowMessage,
+            selfScore: myJournal.selfScore,
             isShared: myJournal.isShared,
           }
         : null,
@@ -62,6 +64,7 @@ export async function GET(req: NextRequest) {
         moodReflection: j.moodReflection,
         learning: j.learning,
         tomorrowMessage: j.tomorrowMessage,
+        selfScore: j.selfScore,
         createdAt: j.createdAt,
       })),
     })
@@ -109,6 +112,7 @@ export async function POST(req: NextRequest) {
         moodReflection: data.moodReflection || undefined,
         learning: data.learning || undefined,
         tomorrowMessage: data.tomorrowMessage || undefined,
+        selfScore: data.selfScore || undefined,
         isShared: data.isShared,
       },
       { upsert: true, new: true }
@@ -121,6 +125,7 @@ export async function POST(req: NextRequest) {
       moodReflection: journal.moodReflection,
       learning: journal.learning,
       tomorrowMessage: journal.tomorrowMessage,
+      selfScore: journal.selfScore,
       isShared: journal.isShared,
       dateKey: journal.dateKey,
     })

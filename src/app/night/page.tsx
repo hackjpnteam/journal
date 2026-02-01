@@ -14,6 +14,7 @@ interface MyJournal {
   moodReflection?: string
   learning?: string
   tomorrowMessage?: string
+  selfScore?: number
   isShared: boolean
 }
 
@@ -26,6 +27,7 @@ interface SharedJournal {
   moodReflection?: string
   learning?: string
   tomorrowMessage?: string
+  selfScore?: number
   createdAt: string
 }
 
@@ -44,6 +46,7 @@ export default function NightPage() {
   const [moodReflection, setMoodReflection] = useState('')
   const [learning, setLearning] = useState('')
   const [tomorrowMessage, setTomorrowMessage] = useState('')
+  const [selfScore, setSelfScore] = useState<number | undefined>(undefined)
   const [isShared, setIsShared] = useState(false)
   const [hasPosted, setHasPosted] = useState(false)
   const [isEditing, setIsEditing] = useState(false)
@@ -91,6 +94,7 @@ export default function NightPage() {
             setMoodReflection(data.myJournal.moodReflection || '')
             setLearning(data.myJournal.learning || '')
             setTomorrowMessage(data.myJournal.tomorrowMessage || '')
+            setSelfScore(data.myJournal.selfScore)
             setIsShared(data.myJournal.isShared)
           }
         }
@@ -122,6 +126,7 @@ export default function NightPage() {
           moodReflection,
           learning,
           tomorrowMessage,
+          selfScore,
           isShared,
         }),
       })
@@ -241,7 +246,7 @@ export default function NightPage() {
                 />
               </div>
 
-              <div className="border-t border-[#d46a7e]/20 pt-6">
+              <div>
                 <label className="block text-sm font-medium text-[#4a3f42] mb-1">
                   明日の自分に一言メッセージを書くとしたら？
                 </label>
@@ -252,6 +257,29 @@ export default function NightPage() {
                   placeholder="例: 焦らなくていい。今日も一歩進んだ。"
                   disabled={!canPost && !isEditing}
                 />
+              </div>
+
+              <div className="border-t border-[#d46a7e]/20 pt-6">
+                <label className="block text-sm font-medium text-[#4a3f42] mb-2">
+                  今日の自分を点数つけるとしたら？（1〜10点）
+                </label>
+                <div className="flex items-center gap-2 flex-wrap">
+                  {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((score) => (
+                    <button
+                      key={score}
+                      type="button"
+                      onClick={() => setSelfScore(score)}
+                      disabled={!canPost && !isEditing}
+                      className={`w-10 h-10 rounded-full text-sm font-medium transition ${
+                        selfScore === score
+                          ? 'bg-[#d46a7e] text-white'
+                          : 'bg-white text-[#4a3f42] hover:bg-[#d46a7e]/10'
+                      } ${(!canPost && !isEditing) ? 'opacity-50 cursor-not-allowed' : ''}`}
+                    >
+                      {score}
+                    </button>
+                  ))}
+                </div>
               </div>
 
               <div className="flex items-center gap-2">
@@ -327,9 +355,16 @@ export default function NightPage() {
               )}
 
               {tomorrowMessage && (
-                <div className="border-t border-[#d46a7e]/20 pt-4">
+                <div>
                   <p className="text-xs text-[#4a3f42]/50">明日の自分へ</p>
                   <p className="text-lg font-medium text-[#4a3f42]">{tomorrowMessage}</p>
+                </div>
+              )}
+
+              {selfScore && (
+                <div className="border-t border-[#d46a7e]/20 pt-4">
+                  <p className="text-xs text-[#4a3f42]/50">今日の自分の点数</p>
+                  <p className="text-2xl font-bold text-[#d46a7e]">{selfScore}<span className="text-sm font-normal text-[#4a3f42]/50">/10</span></p>
                 </div>
               )}
 

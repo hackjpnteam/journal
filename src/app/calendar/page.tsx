@@ -51,31 +51,40 @@ export default function CalendarPage() {
 
         <Card>
           <CardTitle>凡例</CardTitle>
-          <div className="flex flex-wrap gap-4 text-sm">
-            <div className="flex items-center gap-2">
-              <div className="w-2 h-2 bg-[#d46a7e] rounded-full" />
-              <span className="text-[#4a3f42]/60">宣言投稿済み</span>
+          <div className="space-y-3 text-sm">
+            <div className="flex flex-wrap gap-4">
+              <div className="flex items-center gap-2">
+                <div className="w-2 h-2 bg-[#d46a7e] rounded-full" />
+                <span className="text-[#4a3f42]/60">朝ジャーナル</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-2 h-2 bg-[#4a3f42] rounded-full" />
+                <span className="text-[#4a3f42]/60">夜ジャーナル</span>
+              </div>
             </div>
-            <div className="flex items-center gap-2">
-              <span>😵‍💫</span>
-              <span className="text-[#4a3f42]/60">カオス</span>
+            <div className="flex flex-wrap gap-4">
+              <div className="flex items-center gap-2">
+                <span>😵‍💫</span>
+                <span className="text-[#4a3f42]/60">カオス</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span>😐</span>
+                <span className="text-[#4a3f42]/60">フラット</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span>🙂</span>
+                <span className="text-[#4a3f42]/60">安定</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span>🔥</span>
+                <span className="text-[#4a3f42]/60">燃えてる</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span>🌱</span>
+                <span className="text-[#4a3f42]/60">回復中</span>
+              </div>
             </div>
-            <div className="flex items-center gap-2">
-              <span>😐</span>
-              <span className="text-[#4a3f42]/60">フラット</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <span>🙂</span>
-              <span className="text-[#4a3f42]/60">安定</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <span>🔥</span>
-              <span className="text-[#4a3f42]/60">燃えてる</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <span>🌱</span>
-              <span className="text-[#4a3f42]/60">回復中</span>
-            </div>
+            <p className="text-xs text-[#4a3f42]/50">※ 日付をタップすると詳細が見れます</p>
           </div>
         </Card>
       </main>

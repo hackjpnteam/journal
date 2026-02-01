@@ -9,6 +9,7 @@ export interface INightJournal extends Document {
   moodReflection?: string   // 今日の状態（朝の顔マーク）は正しかったか？
   learning?: string         // 今日の学びは何だったか？
   tomorrowMessage?: string  // 明日の自分に一言メッセージを書くとしたら？
+  selfScore?: number        // 今日の自分を点数つけるとしたら？（1-10）
   isShared: boolean         // 共有するかどうか
   createdAt: Date
   updatedAt: Date
@@ -23,6 +24,7 @@ const NightJournalSchema = new Schema<INightJournal>(
     moodReflection: { type: String },
     learning: { type: String },
     tomorrowMessage: { type: String },
+    selfScore: { type: Number, min: 1, max: 10 },
     isShared: { type: Boolean, default: false },
   },
   { timestamps: true }

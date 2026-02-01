@@ -10,14 +10,26 @@ import {
   addMonths,
   subMonths,
   getDay,
+  isToday,
 } from 'date-fns'
 import { ja } from 'date-fns/locale'
 import { MOOD_EMOJI, type Mood } from '@/lib/constants'
 
 interface DayData {
   dateKey: string
-  mood: Mood
-  declaration: string
+  morning?: {
+    mood: Mood
+    declaration: string
+    value?: string
+    action?: string
+    letGo?: string
+  }
+  night?: {
+    proudChoice?: string
+    learning?: string
+    tomorrowMessage?: string
+    selfScore?: number
+  }
 }
 
 interface CalendarMonthProps {
@@ -28,6 +40,7 @@ export function CalendarMonth({ onMonthChange }: CalendarMonthProps) {
   const [currentDate, setCurrentDate] = useState(new Date())
   const [data, setData] = useState<DayData[]>([])
   const [loading, setLoading] = useState(true)
+  const [selectedDay, setSelectedDay] = useState<DayData | null>(null)
 
   const monthStart = startOfMonth(currentDate)
   const monthEnd = endOfMonth(currentDate)
@@ -105,23 +118,32 @@ export function CalendarMonth({ onMonthChange }: CalendarMonthProps) {
         {days.map((day) => {
           const dateKey = format(day, 'yyyy-MM-dd')
           const dayData = dataMap.get(dateKey)
+          const hasMorning = !!dayData?.morning
+          const hasNight = !!dayData?.night
 
           return (
             <div
               key={dateKey}
+              onClick={() => dayData && setSelectedDay(dayData)}
               className={`
-                aspect-square p-1 rounded-lg text-center
+                aspect-square p-1 rounded-lg text-center cursor-pointer transition
                 ${isSameMonth(day, currentDate) ? 'bg-[#f0e8eb]' : 'bg-[#f0e8eb]/50'}
-                ${dayData ? 'ring-1 ring-[#d46a7e]/30' : ''}
+                ${isToday(day) ? 'ring-2 ring-[#d46a7e]' : ''}
+                ${dayData ? 'hover:bg-[#d46a7e]/10' : ''}
               `}
             >
               <div className="text-xs text-[#4a3f42]/60">{format(day, 'd')}</div>
-              {dayData && (
-                <div className="text-lg">{MOOD_EMOJI[dayData.mood]}</div>
+              {hasMorning && (
+                <div className="text-base leading-none">{MOOD_EMOJI[dayData.morning!.mood]}</div>
               )}
-              {dayData && (
-                <div className="w-1.5 h-1.5 bg-[#d46a7e] rounded-full mx-auto mt-0.5" />
-              )}
+              <div className="flex justify-center gap-0.5 mt-0.5">
+                {hasMorning && (
+                  <div className="w-1.5 h-1.5 bg-[#d46a7e] rounded-full" title="朝" />
+                )}
+                {hasNight && (
+                  <div className="w-1.5 h-1.5 bg-[#4a3f42] rounded-full" title="夜" />
+                )}
+              </div>
             </div>
           )
         })}
@@ -129,6 +151,67 @@ export function CalendarMonth({ onMonthChange }: CalendarMonthProps) {
 
       {loading && (
         <div className="text-center text-[#4a3f42]/50 text-sm mt-4">読み込み中...</div>
+      )}
+
+      {/* 選択した日の詳細 */}
+      {selectedDay && (
+        <div className="mt-6 p-4 bg-white rounded-xl">
+          <div className="flex items-center justify-between mb-4">
+            <h4 className="font-medium text-[#4a3f42]">
+              {format(new Date(selectedDay.dateKey), 'M月d日（E）', { locale: ja })}
+            </h4>
+            <button
+              onClick={() => setSelectedDay(null)}
+              className="text-[#4a3f42]/50 hover:text-[#4a3f42]"
+            >
+              ✕
+            </button>
+          </div>
+
+          {selectedDay.morning && (
+            <div className="mb-4">
+              <div className="flex items-center gap-2 mb-2">
+                <span className="text-xl">{MOOD_EMOJI[selectedDay.morning.mood]}</span>
+                <span className="text-sm font-medium text-[#d46a7e]">Morning Journal</span>
+              </div>
+              <div className="space-y-2 text-sm pl-7">
+                {selectedDay.morning.value && (
+                  <p><span className="text-[#4a3f42]/50">価値観:</span> {selectedDay.morning.value}</p>
+                )}
+                {selectedDay.morning.action && (
+                  <p><span className="text-[#4a3f42]/50">行動:</span> {selectedDay.morning.action}</p>
+                )}
+                {selectedDay.morning.letGo && (
+                  <p><span className="text-[#4a3f42]/50">手放す:</span> {selectedDay.morning.letGo}</p>
+                )}
+                <p className="font-medium text-[#4a3f42]">{selectedDay.morning.declaration}</p>
+              </div>
+            </div>
+          )}
+
+          {selectedDay.night && (
+            <div className={selectedDay.morning ? 'border-t border-[#d46a7e]/20 pt-4' : ''}>
+              <div className="flex items-center gap-2 mb-2">
+                <span className="text-xl">🌙</span>
+                <span className="text-sm font-medium text-[#4a3f42]">Night Journal</span>
+                {selectedDay.night.selfScore && (
+                  <span className="ml-auto text-[#d46a7e] font-bold">{selectedDay.night.selfScore}/10</span>
+                )}
+              </div>
+              <div className="space-y-2 text-sm pl-7">
+                {selectedDay.night.proudChoice && (
+                  <p><span className="text-[#4a3f42]/50">誇れる選択:</span> {selectedDay.night.proudChoice}</p>
+                )}
+                {selectedDay.night.learning && (
+                  <p><span className="text-[#4a3f42]/50">学び:</span> {selectedDay.night.learning}</p>
+                )}
+                {selectedDay.night.tomorrowMessage && (
+                  <p className="font-medium text-[#4a3f42]">💬 {selectedDay.night.tomorrowMessage}</p>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
       )}
     </div>
   )
