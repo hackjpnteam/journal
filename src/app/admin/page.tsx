@@ -67,9 +67,11 @@ export default function AdminPage() {
         comparison = a.stats.healthScore - b.stats.healthScore
         break
       case 'lastActivity':
-        const aTime = a.stats.lastActivity ? new Date(a.stats.lastActivity).getTime() : 0
-        const bTime = b.stats.lastActivity ? new Date(b.stats.lastActivity).getTime() : 0
-        comparison = aTime - bTime
+        // nullは最後に表示
+        if (!a.stats.lastActivity && !b.stats.lastActivity) comparison = 0
+        else if (!a.stats.lastActivity) comparison = -1
+        else if (!b.stats.lastActivity) comparison = 1
+        else comparison = new Date(a.stats.lastActivity).getTime() - new Date(b.stats.lastActivity).getTime()
         break
       case 'createdAt':
         comparison = new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
@@ -140,7 +142,7 @@ export default function AdminPage() {
                 setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')
               } else {
                 setSortBy('lastActivity')
-                setSortOrder('asc')
+                setSortOrder('desc')
               }
             }}
             className={`px-3 py-1 rounded-lg text-sm transition ${
