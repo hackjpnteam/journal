@@ -43,7 +43,7 @@ export function TopBar() {
               </Link>
             ))}
 
-            {session?.user.role === 'coach' && (
+            {(session?.user.role === 'coach' || session?.user.role === 'superadmin') && (
               <Link
                 href="/coach"
                 className={`px-3 py-1.5 rounded-lg text-sm transition ${
@@ -53,6 +53,19 @@ export function TopBar() {
                 }`}
               >
                 Coach
+              </Link>
+            )}
+
+            {session?.user.role === 'superadmin' && (
+              <Link
+                href="/admin"
+                className={`px-3 py-1.5 rounded-lg text-sm transition ${
+                  pathname === '/admin'
+                    ? 'bg-white text-[#d46a7e]'
+                    : 'text-white hover:bg-white/20'
+                }`}
+              >
+                Admin
               </Link>
             )}
 
@@ -103,7 +116,7 @@ export function TopBar() {
                 </Link>
               ))}
 
-              {session?.user.role === 'coach' && (
+              {(session?.user.role === 'coach' || session?.user.role === 'superadmin') && (
                 <Link
                   href="/coach"
                   onClick={() => setIsMenuOpen(false)}
@@ -114,6 +127,20 @@ export function TopBar() {
                   }`}
                 >
                   Coach
+                </Link>
+              )}
+
+              {session?.user.role === 'superadmin' && (
+                <Link
+                  href="/admin"
+                  onClick={() => setIsMenuOpen(false)}
+                  className={`px-3 py-2 rounded-lg text-sm text-center transition ${
+                    pathname === '/admin'
+                      ? 'bg-white text-[#d46a7e]'
+                      : 'text-white hover:bg-white/20'
+                  }`}
+                >
+                  Admin
                 </Link>
               )}
             </div>

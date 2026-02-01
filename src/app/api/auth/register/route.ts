@@ -24,9 +24,16 @@ export async function POST(req: NextRequest) {
 
     const passwordHash = await bcrypt.hash(password, 12)
 
-    // COACH_EMAIL に一致する場合は coach ロールを付与
+    // ロールを決定
+    const superadminEmail = process.env.SUPERADMIN_EMAIL
     const coachEmail = process.env.COACH_EMAIL
-    const role = coachEmail && email === coachEmail ? 'coach' : 'member'
+
+    let role: 'member' | 'coach' | 'superadmin' = 'member'
+    if (superadminEmail && email === superadminEmail) {
+      role = 'superadmin'
+    } else if (coachEmail && email === coachEmail) {
+      role = 'coach'
+    }
 
     const user = await User.create({
       email,

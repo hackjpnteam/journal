@@ -5,7 +5,7 @@ declare module 'next-auth' {
     id: string
     email: string
     name: string
-    role: 'member' | 'coach'
+    role: 'member' | 'coach' | 'superadmin'
     onboardingCompleted: boolean
   }
 
@@ -14,7 +14,7 @@ declare module 'next-auth' {
       id: string
       email: string
       name: string
-      role: 'member' | 'coach'
+      role: 'member' | 'coach' | 'superadmin'
       onboardingCompleted: boolean
     }
   }
@@ -23,7 +23,7 @@ declare module 'next-auth' {
 declare module 'next-auth/jwt' {
   interface JWT {
     id: string
-    role: 'member' | 'coach'
+    role: 'member' | 'coach' | 'superadmin'
     onboardingCompleted: boolean
   }
 }

@@ -54,7 +54,7 @@ export const authOptions: NextAuthOptions = {
     async session({ session, token }) {
       if (session.user) {
         session.user.id = token.id as string
-        session.user.role = token.role as 'member' | 'coach'
+        session.user.role = token.role as 'member' | 'coach' | 'superadmin'
         session.user.onboardingCompleted = token.onboardingCompleted as boolean
       }
       return session
