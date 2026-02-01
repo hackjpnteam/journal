@@ -134,42 +134,26 @@ export default function HomePage() {
     }
   }
 
-  const handleCheer = async (postId: string, postType: string, hasUserCheered: boolean) => {
+  const handleCheer = async (postId: string, postType: string) => {
     if (!session?.user) return
 
     setCheeringPost(postId)
     try {
-      if (hasUserCheered) {
-        // 応援を取り消す
-        const res = await fetch(`/api/cheer?postId=${postId}`, {
-          method: 'DELETE',
-        })
-        if (res.ok) {
-          setTimeline(prev =>
-            prev.map(item =>
-              item.id === postId
-                ? { ...item, cheers: item.cheers.filter(c => c.userId !== session.user?.id) }
-                : item
-            )
+      // 応援する（何回でも可能）
+      const res = await fetch('/api/cheer', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ postId, postType }),
+      })
+      if (res.ok) {
+        const data = await res.json()
+        setTimeline(prev =>
+          prev.map(item =>
+            item.id === postId
+              ? { ...item, cheers: [...item.cheers, data.cheer] }
+              : item
           )
-        }
-      } else {
-        // 応援する
-        const res = await fetch('/api/cheer', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ postId, postType }),
-        })
-        if (res.ok) {
-          const data = await res.json()
-          setTimeline(prev =>
-            prev.map(item =>
-              item.id === postId
-                ? { ...item, cheers: [...item.cheers, data.cheer] }
-                : item
-            )
-          )
-        }
+        )
       }
     } catch (error) {
       console.error('Cheer error:', error)
@@ -413,25 +397,28 @@ export default function HomePage() {
 
                   {/* 応援セクション */}
                   {(() => {
-                    const hasUserCheered = item.cheers.some(c => c.userId === session?.user?.id)
+                    // ユニークな応援者を取得（最新5人まで表示）
+                    const uniqueCheeers = item.cheers.reduce((acc, cheer) => {
+                      if (!acc.find(c => c.userId === cheer.userId)) {
+                        acc.push(cheer)
+                      }
+                      return acc
+                    }, [] as typeof item.cheers)
+
                     return (
                       <div className={`mt-3 pt-3 border-t ${item.type === 'night' ? 'border-white/20' : 'border-gray-200'}`}>
                         <div className="flex items-center gap-3">
                           <button
-                            onClick={() => handleCheer(item.id, item.type, hasUserCheered)}
+                            onClick={() => handleCheer(item.id, item.type)}
                             disabled={cheeringPost === item.id}
-                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm transition disabled:opacity-50 ${
-                              hasUserCheered
-                                ? item.type === 'night'
-                                  ? 'bg-pink-500/30 text-pink-200'
-                                  : 'bg-pink-100 text-pink-600'
-                                : item.type === 'night'
-                                ? 'bg-white/10 text-white/70 hover:bg-white/20'
-                                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm transition disabled:opacity-50 active:scale-95 ${
+                              item.type === 'night'
+                                ? 'bg-white/10 text-white/70 hover:bg-pink-500/30 hover:text-pink-200'
+                                : 'bg-gray-100 text-gray-600 hover:bg-pink-100 hover:text-pink-600'
                             }`}
                           >
-                            <span className="text-base">{hasUserCheered ? '🎉' : '👏'}</span>
-                            <span>{hasUserCheered ? '応援中' : '応援する'}</span>
+                            <span className="text-base">👏</span>
+                            <span>応援</span>
                             {item.cheers.length > 0 && (
                               <span className={`ml-1 font-medium ${
                                 item.type === 'night' ? 'text-white/90' : 'text-[#d46a7e]'
@@ -441,12 +428,12 @@ export default function HomePage() {
                             )}
                           </button>
 
-                          {/* 応援者のアバター */}
-                          {item.cheers.length > 0 && (
+                          {/* 応援者のアバター（ユニークユーザーのみ表示） */}
+                          {uniqueCheeers.length > 0 && (
                             <div className="flex items-center">
                               <div className="flex -space-x-2">
-                                {item.cheers.slice(0, 5).map((cheer) => (
-                                  <div key={cheer.id} className="relative group">
+                                {uniqueCheeers.slice(0, 5).map((cheer, index) => (
+                                  <div key={`${cheer.userId}-${index}`} className="relative group">
                                     {cheer.userImage ? (
                                       <img
                                         src={cheer.userImage}
@@ -467,11 +454,11 @@ export default function HomePage() {
                                   </div>
                                 ))}
                               </div>
-                              {item.cheers.length > 5 && (
+                              {uniqueCheeers.length > 5 && (
                                 <span className={`ml-2 text-xs ${
                                   item.type === 'night' ? 'text-white/60' : 'text-gray-500'
                                 }`}>
-                                  +{item.cheers.length - 5}人
+                                  +{uniqueCheeers.length - 5}人
                                 </span>
                               )}
                             </div>

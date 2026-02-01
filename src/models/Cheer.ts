@@ -19,7 +19,7 @@ const CheerSchema = new Schema<ICheer>({
   createdAt: { type: Date, default: Date.now },
 })
 
-// 同じユーザーが同じ投稿に複数回応援できないようにする
-CheerSchema.index({ postId: 1, userId: 1 }, { unique: true })
+// 投稿ごとの応援を効率的に取得するためのインデックス
+CheerSchema.index({ postId: 1 })
 
 export const Cheer = mongoose.models.Cheer || mongoose.model<ICheer>('Cheer', CheerSchema)

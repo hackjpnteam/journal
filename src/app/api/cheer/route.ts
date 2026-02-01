@@ -35,17 +35,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'ユーザーが見つかりません' }, { status: 404 })
     }
 
-    // 既に応援しているかチェック
-    const existingCheer = await Cheer.findOne({
-      postId: data.postId,
-      userId: session.user.id,
-    })
-
-    if (existingCheer) {
-      return NextResponse.json({ error: '既に応援しています' }, { status: 400 })
-    }
-
-    // 応援を作成
+    // 応援を作成（何回でも可能）
     const cheer = await Cheer.create({
       postId: data.postId,
       postType: data.postType,
@@ -69,39 +59,6 @@ export async function POST(req: NextRequest) {
     }
     console.error('Create cheer error:', error)
     return NextResponse.json({ error: '応援に失敗しました' }, { status: 500 })
-  }
-}
-
-// 応援を取り消し
-export async function DELETE(req: NextRequest) {
-  try {
-    const session = await getServerSession(authOptions)
-    if (!session?.user) {
-      return NextResponse.json({ error: '認証が必要です' }, { status: 401 })
-    }
-
-    const { searchParams } = new URL(req.url)
-    const postId = searchParams.get('postId')
-
-    if (!isValidObjectId(postId)) {
-      return NextResponse.json({ error: '無効なIDです' }, { status: 400 })
-    }
-
-    await connectDB()
-
-    const result = await Cheer.findOneAndDelete({
-      postId,
-      userId: session.user.id,
-    })
-
-    if (!result) {
-      return NextResponse.json({ error: '応援が見つかりません' }, { status: 404 })
-    }
-
-    return NextResponse.json({ success: true })
-  } catch (error) {
-    console.error('Delete cheer error:', error)
-    return NextResponse.json({ error: '取り消しに失敗しました' }, { status: 500 })
   }
 }
 
