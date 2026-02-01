@@ -9,16 +9,24 @@ import { MOOD_EMOJI, type Mood } from '@/lib/constants'
 import { format } from 'date-fns'
 import { ja } from 'date-fns/locale'
 
-interface TodayShare {
-  mood: Mood
-  declaration: string
-}
-
-interface OKRData {
-  objective: string
-  keyResults: string[]
-  focus?: string
-  identityFocus?: string
+interface TimelineItem {
+  id: string
+  type: 'morning' | 'night'
+  userId: string
+  userName: string
+  userImage: string | null
+  createdAt: string
+  // Morning fields
+  mood?: Mood
+  declaration?: string
+  value?: string
+  action?: string
+  letGo?: string
+  // Night fields
+  proudChoice?: string
+  learning?: string
+  tomorrowMessage?: string
+  selfScore?: number
 }
 
 interface CoachingNote {
@@ -28,46 +36,28 @@ interface CoachingNote {
 
 export default function HomePage() {
   const { data: session } = useSession()
-  const [todayShare, setTodayShare] = useState<TodayShare | null>(null)
-  const [weeklyOKR, setWeeklyOKR] = useState<OKRData | null>(null)
+  const [timeline, setTimeline] = useState<TimelineItem[]>([])
   const [coachingNote, setCoachingNote] = useState<CoachingNote | null>(null)
   const [loading, setLoading] = useState(true)
 
   const today = format(new Date(), 'yyyy年M月d日（E）', { locale: ja })
+  const currentHour = new Date().getHours()
 
   useEffect(() => {
     const fetchData = async () => {
       try {
+        // タイムラインを取得
+        const timelineRes = await fetch('/api/timeline')
+        if (timelineRes.ok) {
+          const timelineData = await timelineRes.json()
+          setTimeline(timelineData.timeline || [])
+        }
+
+        // コーチングノートを取得
         const shareRes = await fetch('/api/share')
         if (shareRes.ok) {
           const shareData = await shareRes.json()
-          const myShare = shareData.shares.find(
-            (s: { userId: string }) => s.userId === session?.user?.id
-          )
-          if (myShare) {
-            setTodayShare({ mood: myShare.mood, declaration: myShare.declaration })
-          }
           setCoachingNote(shareData.myCoachingNote)
-        }
-
-        const now = new Date()
-        const year = now.getFullYear()
-        const weekNum = Math.ceil(
-          ((now.getTime() - new Date(year, 0, 1).getTime()) / 86400000 +
-            new Date(year, 0, 1).getDay() +
-            1) /
-            7
-        )
-        const weeklyPeriodKey = `${year}-W${String(weekNum).padStart(2, '0')}`
-
-        const okrRes = await fetch(
-          `/api/okr?type=weekly&periodKey=${weeklyPeriodKey}`
-        )
-        if (okrRes.ok) {
-          const okrData = await okrRes.json()
-          if (okrData) {
-            setWeeklyOKR(okrData)
-          }
         }
       } catch (error) {
         console.error('Failed to fetch data:', error)
@@ -81,6 +71,27 @@ export default function HomePage() {
     }
   }, [session])
 
+  const getGreeting = () => {
+    if (currentHour < 12) return 'おはようございます'
+    if (currentHour < 18) return 'こんにちは'
+    return 'こんばんは'
+  }
+
+  const formatTimeAgo = (dateString: string) => {
+    const date = new Date(dateString)
+    const now = new Date()
+    const diffMs = now.getTime() - date.getTime()
+    const diffMins = Math.floor(diffMs / (1000 * 60))
+    const diffHours = Math.floor(diffMs / (1000 * 60 * 60))
+    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24))
+
+    if (diffMins < 1) return 'たった今'
+    if (diffMins < 60) return `${diffMins}分前`
+    if (diffHours < 24) return `${diffHours}時間前`
+    if (diffDays < 7) return `${diffDays}日前`
+    return format(date, 'M/d', { locale: ja })
+  }
+
   return (
     <div className="min-h-screen bg-[#f0e8eb]">
       <TopBar />
@@ -89,45 +100,29 @@ export default function HomePage() {
         <div className="text-center py-4">
           <p className="text-[#4a3f42]/60 text-sm">{today}</p>
           <h1 className="text-xl font-semibold mt-1 text-[#4a3f42]">
-            おはようございます、{session?.user?.name}さん
+            {getGreeting()}、{session?.user?.name}さん
           </h1>
         </div>
 
-        <Card className="text-center">
-          <div className="text-4xl mb-2">🌅</div>
-          <p className="text-[#4a3f42]/60 mb-4">
-            毎朝 7:00〜8:00 に今日の宣言を投稿できます
-          </p>
+        {/* アクションボタン */}
+        <div className="flex gap-3">
           <Link
             href="/share"
-            className="inline-block bg-[#d46a7e] hover:bg-[#c25a6e] text-white font-semibold px-6 py-3 rounded-xl transition"
+            className="flex-1 flex items-center justify-center gap-2 bg-[#d46a7e] hover:bg-[#c25a6e] text-white font-semibold px-4 py-3 rounded-xl transition"
           >
-            共有ページへ
+            <span>☀️</span>
+            <span>朝の投稿</span>
           </Link>
-        </Card>
+          <Link
+            href="/night"
+            className="flex-1 flex items-center justify-center gap-2 bg-[#4a3f42] hover:bg-[#3a2f32] text-white font-semibold px-4 py-3 rounded-xl transition"
+          >
+            <span>🌙</span>
+            <span>夜の投稿</span>
+          </Link>
+        </div>
 
-        {loading ? (
-          <Card>
-            <div className="text-center text-[#4a3f42]/50">読み込み中...</div>
-          </Card>
-        ) : todayShare ? (
-          <Card>
-            <CardTitle>今日の宣言</CardTitle>
-            <div className="flex items-start gap-4">
-              <div className="text-4xl">{MOOD_EMOJI[todayShare.mood]}</div>
-              <div className="flex-1">
-                <p className="text-lg text-[#4a3f42]">{todayShare.declaration}</p>
-              </div>
-            </div>
-          </Card>
-        ) : (
-          <Card>
-            <div className="text-center text-[#4a3f42]/60">
-              今日はまだ宣言していません
-            </div>
-          </Card>
-        )}
-
+        {/* コーチからのフィードバック */}
         {coachingNote && (coachingNote.redline || coachingNote.question) && (
           <Card className="border-2 border-[#d46a7e]/30">
             <CardTitle>コーチからのフィードバック</CardTitle>
@@ -146,55 +141,106 @@ export default function HomePage() {
           </Card>
         )}
 
-        {weeklyOKR && (
-          <Card>
-            <CardTitle>今週の目標</CardTitle>
-            <p className="text-lg mb-3 text-[#4a3f42]">{weeklyOKR.objective}</p>
-            {weeklyOKR.keyResults.length > 0 && (
-              <ul className="space-y-1 text-[#4a3f42]/70 text-sm mb-3">
-                {weeklyOKR.keyResults.map((kr, i) => (
-                  <li key={i}>・{kr}</li>
-                ))}
-              </ul>
-            )}
-            {weeklyOKR.focus && (
-              <p className="text-[#d46a7e] text-sm">
-                Focus: {weeklyOKR.focus}
-              </p>
-            )}
-            <Link
-              href="/okr"
-              className="inline-block mt-4 text-sm text-[#4a3f42]/60 hover:text-[#d46a7e] transition"
-            >
-              OKRを編集 →
-            </Link>
-          </Card>
-        )}
+        {/* タイムライン */}
+        <div>
+          <h2 className="text-lg font-semibold text-[#4a3f42] mb-4">みんなの投稿</h2>
 
-        {/* コーチ・管理者向けナビゲーション */}
-        {(session?.user?.role === 'coach' || session?.user?.role === 'superadmin') && (
-          <Card>
-            <CardTitle>管理メニュー</CardTitle>
-            <div className="flex flex-wrap gap-3">
-              <Link
-                href="/coach"
-                className="inline-flex items-center gap-2 bg-[#4a3f42] hover:bg-[#3a2f32] text-white font-medium px-4 py-2 rounded-xl transition"
-              >
-                <span>📝</span>
-                <span>コーチページ</span>
-              </Link>
-              {session?.user?.role === 'superadmin' && (
-                <Link
-                  href="/admin"
-                  className="inline-flex items-center gap-2 bg-[#d46a7e] hover:bg-[#c25a6e] text-white font-medium px-4 py-2 rounded-xl transition"
+          {loading ? (
+            <Card>
+              <div className="text-center text-[#4a3f42]/50">読み込み中...</div>
+            </Card>
+          ) : timeline.length === 0 ? (
+            <Card>
+              <div className="text-center text-[#4a3f42]/50">
+                まだ投稿がありません
+              </div>
+            </Card>
+          ) : (
+            <div className="space-y-4">
+              {timeline.map((item) => (
+                <Card
+                  key={item.id}
+                  className={item.userId === session?.user?.id ? 'border-2 border-[#d46a7e]/30' : ''}
                 >
-                  <span>⚙️</span>
-                  <span>管理者ページ</span>
-                </Link>
-              )}
+                  {/* ヘッダー */}
+                  <div className="flex items-center gap-3 mb-3">
+                    {item.userImage ? (
+                      <img
+                        src={item.userImage}
+                        alt={item.userName}
+                        className="w-10 h-10 rounded-full object-cover"
+                      />
+                    ) : (
+                      <div className="w-10 h-10 rounded-full bg-[#d46a7e]/20 flex items-center justify-center">
+                        <span className="text-lg">
+                          {item.type === 'morning' ? '☀️' : '🌙'}
+                        </span>
+                      </div>
+                    )}
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium text-[#4a3f42]">{item.userName}</span>
+                        {item.type === 'morning' && item.mood && (
+                          <span className="text-lg">{MOOD_EMOJI[item.mood]}</span>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-2 text-xs text-[#4a3f42]/50">
+                        <span className={item.type === 'morning' ? 'text-[#d46a7e]' : 'text-[#4a3f42]'}>
+                          {item.type === 'morning' ? '朝の投稿' : '夜の投稿'}
+                        </span>
+                        <span>•</span>
+                        <span>{formatTimeAgo(item.createdAt)}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* コンテンツ */}
+                  {item.type === 'morning' ? (
+                    <div className="space-y-2">
+                      {item.declaration && (
+                        <p className="text-[#4a3f42] font-medium">{item.declaration}</p>
+                      )}
+                      {(item.value || item.action || item.letGo) && (
+                        <div className="text-sm text-[#4a3f42]/70 space-y-1 pl-2 border-l-2 border-[#d46a7e]/30">
+                          {item.value && <p>価値観: {item.value}</p>}
+                          {item.action && <p>行動: {item.action}</p>}
+                          {item.letGo && <p>手放す: {item.letGo}</p>}
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      {item.proudChoice && (
+                        <div>
+                          <p className="text-xs text-[#4a3f42]/50">誇れる選択</p>
+                          <p className="text-[#4a3f42]">{item.proudChoice}</p>
+                        </div>
+                      )}
+                      {item.learning && (
+                        <div>
+                          <p className="text-xs text-[#4a3f42]/50">学び</p>
+                          <p className="text-[#4a3f42]">{item.learning}</p>
+                        </div>
+                      )}
+                      {item.tomorrowMessage && (
+                        <div className="bg-[#f0e8eb] rounded-lg p-3 mt-2">
+                          <p className="text-xs text-[#4a3f42]/50 mb-1">明日の自分へ</p>
+                          <p className="text-[#4a3f42] font-medium">{item.tomorrowMessage}</p>
+                        </div>
+                      )}
+                      {item.selfScore && (
+                        <div className="flex items-center gap-2 mt-2">
+                          <span className="text-sm text-[#4a3f42]/50">今日の点数:</span>
+                          <span className="text-lg font-bold text-[#d46a7e]">{item.selfScore}/10</span>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </Card>
+              ))}
             </div>
-          </Card>
-        )}
+          )}
+        </div>
       </main>
     </div>
   )
