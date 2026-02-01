@@ -13,6 +13,7 @@ interface Share {
   id: string
   userId: string
   userName: string
+  userAvatar?: string
   mood: Mood
   value?: string
   action?: string
@@ -364,8 +365,11 @@ export default function SharePage() {
                   }`}
                 >
                   <div className="flex items-center gap-3 mb-2">
+                    <div className="flex items-center gap-2">
+                      <span className="text-2xl">{share.userAvatar || '👤'}</span>
+                      <span className="text-sm font-medium text-[#4a3f42]">{share.userName}</span>
+                    </div>
                     <span className="text-2xl">{MOOD_EMOJI[share.mood]}</span>
-                    <span className="text-sm text-[#4a3f42]/60">{share.userName}</span>
                   </div>
 
                   {(share.value || share.action || share.letGo) && (

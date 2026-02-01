@@ -22,6 +22,7 @@ interface SharedJournal {
   id: string
   userId: string
   userName: string
+  userAvatar?: string
   proudChoice?: string
   offChoice?: string
   moodReflection?: string
@@ -402,8 +403,11 @@ export default function NightPage() {
                   }`}
                 >
                   <div className="flex items-center gap-3 mb-2">
-                    <span className="text-2xl">🌙</span>
-                    <span className="text-sm text-[#4a3f42]/60">{journal.userName}</span>
+                    <div className="flex items-center gap-2">
+                      <span className="text-2xl">{journal.userAvatar || '👤'}</span>
+                      <span className="text-sm font-medium text-[#4a3f42]">{journal.userName}</span>
+                    </div>
+                    <span className="text-xl">🌙</span>
                   </div>
 
                   <div className="text-sm text-[#4a3f42]/70 space-y-1 mb-2 pl-9">

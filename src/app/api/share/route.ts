@@ -28,7 +28,7 @@ export async function GET(req: NextRequest) {
     await connectDB()
 
     const shares = await DailyShare.find({ dateKey })
-      .populate('userId', 'name')
+      .populate('userId', 'name avatar')
       .sort({ createdAt: 1 })
 
     const myCoachingNote = await CoachingNote.findOne({
@@ -41,6 +41,7 @@ export async function GET(req: NextRequest) {
         id: s._id.toString(),
         userId: s.userId._id.toString(),
         userName: (s.userId as unknown as { name: string }).name,
+        userAvatar: (s.userId as unknown as { avatar?: string }).avatar || '👤',
         mood: s.mood,
         value: s.value,
         action: s.action,
