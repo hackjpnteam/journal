@@ -34,10 +34,17 @@ interface CoachingNote {
   question?: string
 }
 
+interface OKRData {
+  objective: string
+  keyResults: string[]
+  focus?: string
+}
+
 export default function HomePage() {
   const { data: session } = useSession()
   const [timeline, setTimeline] = useState<TimelineItem[]>([])
   const [coachingNote, setCoachingNote] = useState<CoachingNote | null>(null)
+  const [weeklyOKR, setWeeklyOKR] = useState<OKRData | null>(null)
   const [loading, setLoading] = useState(true)
 
   const today = format(new Date(), 'yyyy年M月d日（E）', { locale: ja })
@@ -58,6 +65,24 @@ export default function HomePage() {
         if (shareRes.ok) {
           const shareData = await shareRes.json()
           setCoachingNote(shareData.myCoachingNote)
+        }
+
+        // 今週のOKRを取得
+        const now = new Date()
+        const year = now.getFullYear()
+        const weekNum = Math.ceil(
+          ((now.getTime() - new Date(year, 0, 1).getTime()) / 86400000 +
+            new Date(year, 0, 1).getDay() +
+            1) /
+            7
+        )
+        const weeklyPeriodKey = `${year}-W${String(weekNum).padStart(2, '0')}`
+        const okrRes = await fetch(`/api/okr?type=weekly&periodKey=${weeklyPeriodKey}`)
+        if (okrRes.ok) {
+          const okrData = await okrRes.json()
+          if (okrData) {
+            setWeeklyOKR(okrData)
+          }
         }
       } catch (error) {
         console.error('Failed to fetch data:', error)
@@ -121,6 +146,34 @@ export default function HomePage() {
             <span>夜の投稿</span>
           </Link>
         </div>
+
+        {/* 今週のOKR */}
+        {weeklyOKR && (
+          <Card>
+            <div className="flex items-center justify-between mb-2">
+              <CardTitle>今週の目標</CardTitle>
+              <Link
+                href="/okr"
+                className="text-xs text-[#d46a7e] hover:underline"
+              >
+                編集 →
+              </Link>
+            </div>
+            <p className="text-[#4a3f42] font-medium mb-2">{weeklyOKR.objective}</p>
+            {weeklyOKR.keyResults && weeklyOKR.keyResults.filter(kr => kr).length > 0 && (
+              <ul className="space-y-1 text-sm text-[#4a3f42]/70 mb-2">
+                {weeklyOKR.keyResults.filter(kr => kr).map((kr, i) => (
+                  <li key={i}>• {kr}</li>
+                ))}
+              </ul>
+            )}
+            {weeklyOKR.focus && (
+              <p className="text-sm text-[#d46a7e]">
+                Focus: {weeklyOKR.focus}
+              </p>
+            )}
+          </Card>
+        )}
 
         {/* コーチからのフィードバック */}
         {coachingNote && (coachingNote.redline || coachingNote.question) && (
