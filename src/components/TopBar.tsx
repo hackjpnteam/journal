@@ -22,7 +22,7 @@ export function TopBar() {
       <div className="max-w-4xl mx-auto px-4 py-3">
         <div className="flex items-center justify-between">
           <Link href="/" className="text-lg font-semibold text-white">
-            Ultimate Morning
+            究極の朝活
           </Link>
 
           <nav className="flex items-center gap-1">

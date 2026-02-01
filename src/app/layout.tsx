@@ -3,7 +3,7 @@ import './globals.css'
 import { Providers } from './providers'
 
 export const metadata: Metadata = {
-  title: 'Ultimate Morning',
+  title: '究極の朝活',
   description: '毎朝7時の宣言で1日を始める',
 }
 

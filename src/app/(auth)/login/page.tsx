@@ -58,7 +58,7 @@ export default function LoginPage() {
     <div className="min-h-screen flex items-center justify-center p-4 bg-[#f0e8eb]">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-[#d46a7e] mb-2">Ultimate Morning</h1>
+          <h1 className="text-3xl font-bold text-[#d46a7e] mb-2">究極の朝活</h1>
           <p className="text-[#4a3f42]/70">毎朝7時の宣言で1日を始める</p>
         </div>
 
