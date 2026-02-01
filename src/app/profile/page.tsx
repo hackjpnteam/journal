@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import Link from 'next/link'
 import { useSession } from 'next-auth/react'
 import { TopBar } from '@/components/TopBar'
 import { Card, CardTitle } from '@/components/Card'
@@ -141,6 +142,18 @@ export default function ProfilePage() {
         >
           {saving ? '保存中...' : '保存する'}
         </button>
+
+        <Card>
+          <CardTitle>その他の設定</CardTitle>
+          <Link
+            href="/settings"
+            className="inline-flex items-center gap-2 text-[#4a3f42]/70 hover:text-[#d46a7e] transition"
+          >
+            <span>⚙️</span>
+            <span>Google Calendar連携などの設定</span>
+            <span>→</span>
+          </Link>
+        </Card>
       </main>
     </div>
   )
