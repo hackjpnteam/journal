@@ -13,7 +13,7 @@ interface Share {
   id: string
   userId: string
   userName: string
-  userAvatar?: string
+  userImage?: string | null
   mood: Mood
   value?: string
   action?: string
@@ -21,6 +21,46 @@ interface Share {
   declaration: string
   createdAt: string
 }
+
+// サンプル投稿データ
+const SAMPLE_SHARES: Share[] = [
+  {
+    id: 'sample-1',
+    userId: 'sample-1',
+    userName: '山田太郎',
+    userImage: null,
+    mood: 'stable',
+    value: '誠実さ',
+    action: '企画書を完成させる',
+    letGo: '完璧主義',
+    declaration: '今日の自分は、一歩ずつ着実に前に進む。',
+    createdAt: new Date().toISOString(),
+  },
+  {
+    id: 'sample-2',
+    userId: 'sample-2',
+    userName: '佐藤花子',
+    userImage: null,
+    mood: 'burning',
+    value: 'チャレンジ精神',
+    action: '新しいプロジェクトの提案をする',
+    letGo: '失敗への恐れ',
+    declaration: '今日の自分は、挑戦を楽しむ！',
+    createdAt: new Date().toISOString(),
+  },
+  {
+    id: 'sample-3',
+    userId: 'sample-3',
+    userName: '鈴木一郎',
+    userImage: null,
+    mood: 'recovering',
+    value: '自分へのやさしさ',
+    action: '無理せず休憩を取りながら仕事する',
+    letGo: '焦り',
+    declaration: '今日の自分は、自分のペースを大切にする。',
+    createdAt: new Date().toISOString(),
+  },
+]
 
 interface CoachingNote {
   redline?: string
@@ -349,13 +389,15 @@ export default function SharePage() {
           <CardTitle>みんなの宣言</CardTitle>
           {loading ? (
             <div className="text-center text-[#4a3f42]/50">読み込み中...</div>
-          ) : shares.length === 0 ? (
-            <div className="text-center text-[#4a3f42]/50">
-              まだ誰も投稿していません
-            </div>
           ) : (
             <div className="space-y-4">
-              {shares.map((share) => (
+              {shares.length === 0 && (
+                <div className="text-center text-[#4a3f42]/50 mb-4 pb-4 border-b border-[#d46a7e]/20">
+                  <p>まだ今日の投稿はありません</p>
+                  <p className="text-xs mt-1">以下はサンプル表示です</p>
+                </div>
+              )}
+              {(shares.length > 0 ? shares : SAMPLE_SHARES).map((share) => (
                 <div
                   key={share.id}
                   className={`p-4 rounded-lg ${
@@ -366,7 +408,19 @@ export default function SharePage() {
                 >
                   <div className="flex items-center gap-3 mb-2">
                     <div className="flex items-center gap-2">
-                      <span className="text-2xl">{share.userAvatar || '👤'}</span>
+                      {share.userImage ? (
+                        <img
+                          src={share.userImage}
+                          alt={share.userName}
+                          className="w-8 h-8 rounded-full object-cover"
+                        />
+                      ) : (
+                        <div className="w-8 h-8 rounded-full bg-[#d46a7e]/20 flex items-center justify-center">
+                          <svg className="w-4 h-4 text-[#d46a7e]/60" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
+                          </svg>
+                        </div>
+                      )}
                       <span className="text-sm font-medium text-[#4a3f42]">{share.userName}</span>
                     </div>
                     <span className="text-2xl">{MOOD_EMOJI[share.mood]}</span>

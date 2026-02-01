@@ -1,13 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { z } from 'zod'
+import bcrypt from 'bcryptjs'
 import { authOptions } from '@/lib/auth'
 import { connectDB } from '@/lib/db'
 import { User } from '@/models/User'
 
 const profileSchema = z.object({
-  avatar: z.string().optional(),
   name: z.string().min(1).optional(),
+  profileImage: z.string().optional(),
+  currentPassword: z.string().optional(),
+  newPassword: z.string().min(6).optional(),
 })
 
 export async function GET() {
@@ -27,7 +30,7 @@ export async function GET() {
     return NextResponse.json({
       name: user.name,
       email: user.email,
-      avatar: user.avatar || '👤',
+      profileImage: user.profileImage || null,
     })
   } catch (error) {
     console.error('Get profile error:', error)
@@ -47,24 +50,41 @@ export async function PUT(req: NextRequest) {
 
     await connectDB()
 
-    const updateData: { avatar?: string; name?: string } = {}
-    if (data.avatar) updateData.avatar = data.avatar
-    if (data.name) updateData.name = data.name
-
-    const user = await User.findByIdAndUpdate(
-      session.user.id,
-      updateData,
-      { new: true }
-    )
-
+    const user = await User.findById(session.user.id)
     if (!user) {
       return NextResponse.json({ error: 'ユーザーが見つかりません' }, { status: 404 })
     }
 
+    // パスワード変更の処理
+    if (data.newPassword) {
+      if (!data.currentPassword) {
+        return NextResponse.json({ error: '現在のパスワードを入力してください' }, { status: 400 })
+      }
+
+      const isValid = await bcrypt.compare(data.currentPassword, user.passwordHash)
+      if (!isValid) {
+        return NextResponse.json({ error: '現在のパスワードが正しくありません' }, { status: 400 })
+      }
+
+      user.passwordHash = await bcrypt.hash(data.newPassword, 10)
+    }
+
+    // 名前の更新
+    if (data.name) {
+      user.name = data.name
+    }
+
+    // プロフィール画像の更新
+    if (data.profileImage !== undefined) {
+      user.profileImage = data.profileImage || undefined
+    }
+
+    await user.save()
+
     return NextResponse.json({
       name: user.name,
       email: user.email,
-      avatar: user.avatar || '👤',
+      profileImage: user.profileImage || null,
     })
   } catch (error) {
     if (error instanceof z.ZodError) {

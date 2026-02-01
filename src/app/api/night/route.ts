@@ -39,7 +39,7 @@ export async function GET(req: NextRequest) {
       dateKey,
       isShared: true,
     })
-      .populate('userId', 'name avatar')
+      .populate('userId', 'name profileImage')
       .sort({ createdAt: 1 })
 
     return NextResponse.json({
@@ -59,7 +59,7 @@ export async function GET(req: NextRequest) {
         id: j._id.toString(),
         userId: j.userId._id.toString(),
         userName: (j.userId as unknown as { name: string }).name,
-        userAvatar: (j.userId as unknown as { avatar?: string }).avatar || '👤',
+        userImage: (j.userId as unknown as { profileImage?: string }).profileImage || null,
         proudChoice: j.proudChoice,
         offChoice: j.offChoice,
         moodReflection: j.moodReflection,

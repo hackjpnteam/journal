@@ -11,7 +11,7 @@ const navItems = [
   { href: '/night', label: '夜' },
   { href: '/calendar', label: 'カレンダー' },
   { href: '/okr', label: 'OKR' },
-  { href: '/profile', label: 'プロフィール' },
+  { href: '/profile', label: 'マイページ' },
 ]
 
 export function TopBar() {

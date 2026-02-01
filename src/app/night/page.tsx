@@ -22,7 +22,7 @@ interface SharedJournal {
   id: string
   userId: string
   userName: string
-  userAvatar?: string
+  userImage?: string | null
   proudChoice?: string
   offChoice?: string
   moodReflection?: string
@@ -31,6 +31,43 @@ interface SharedJournal {
   selfScore?: number
   createdAt: string
 }
+
+// サンプル投稿データ
+const SAMPLE_JOURNALS: SharedJournal[] = [
+  {
+    id: 'sample-1',
+    userId: 'sample-1',
+    userName: '山田太郎',
+    userImage: null,
+    proudChoice: '難しい会話を避けずに向き合った',
+    learning: '小さな一歩でも進めば気持ちが変わる',
+    tomorrowMessage: '焦らなくていい。今日も一歩進んだ。',
+    selfScore: 7,
+    createdAt: new Date().toISOString(),
+  },
+  {
+    id: 'sample-2',
+    userId: 'sample-2',
+    userName: '佐藤花子',
+    userImage: null,
+    proudChoice: '朝一番で最も重要なタスクに取り組んだ',
+    learning: '朝の時間を有効活用すると1日の充実感が違う',
+    tomorrowMessage: '明日も朝イチで集中して取り組もう！',
+    selfScore: 8,
+    createdAt: new Date().toISOString(),
+  },
+  {
+    id: 'sample-3',
+    userId: 'sample-3',
+    userName: '鈴木一郎',
+    userImage: null,
+    proudChoice: '体調が悪くても最低限のタスクはこなした',
+    learning: '無理しない勇気も大切',
+    tomorrowMessage: 'ゆっくり休んで、また明日頑張ろう。',
+    selfScore: 6,
+    createdAt: new Date().toISOString(),
+  },
+]
 
 type WindowStatus = 'before' | 'open' | 'after'
 
@@ -387,13 +424,15 @@ export default function NightPage() {
           <CardTitle>みんなのNight Journal</CardTitle>
           {loading ? (
             <div className="text-center text-[#4a3f42]/50">読み込み中...</div>
-          ) : sharedJournals.length === 0 ? (
-            <div className="text-center text-[#4a3f42]/50">
-              まだ共有されている投稿はありません
-            </div>
           ) : (
             <div className="space-y-4">
-              {sharedJournals.map((journal) => (
+              {sharedJournals.length === 0 && (
+                <div className="text-center text-[#4a3f42]/50 mb-4 pb-4 border-b border-[#4a3f42]/20">
+                  <p>まだ今日の投稿はありません</p>
+                  <p className="text-xs mt-1">以下はサンプル表示です</p>
+                </div>
+              )}
+              {(sharedJournals.length > 0 ? sharedJournals : SAMPLE_JOURNALS).map((journal) => (
                 <div
                   key={journal.id}
                   className={`p-4 rounded-lg ${
@@ -404,7 +443,19 @@ export default function NightPage() {
                 >
                   <div className="flex items-center gap-3 mb-2">
                     <div className="flex items-center gap-2">
-                      <span className="text-2xl">{journal.userAvatar || '👤'}</span>
+                      {journal.userImage ? (
+                        <img
+                          src={journal.userImage}
+                          alt={journal.userName}
+                          className="w-8 h-8 rounded-full object-cover"
+                        />
+                      ) : (
+                        <div className="w-8 h-8 rounded-full bg-[#4a3f42]/20 flex items-center justify-center">
+                          <svg className="w-4 h-4 text-[#4a3f42]/60" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
+                          </svg>
+                        </div>
+                      )}
                       <span className="text-sm font-medium text-[#4a3f42]">{journal.userName}</span>
                     </div>
                     <span className="text-xl">🌙</span>
