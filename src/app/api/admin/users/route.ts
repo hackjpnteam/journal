@@ -19,8 +19,10 @@ export async function GET() {
 
     await connectDB()
 
-    // 全ユーザーを取得
-    const users = await User.find({}).sort({ createdAt: -1 })
+    // 全ユーザーを取得（サンプル・テストユーザーを除外）
+    const users = await User.find({
+      email: { $not: /sample|test|example/i }
+    }).sort({ createdAt: -1 })
 
     // 過去30日間の日付キーを生成
     const last30Days: string[] = []
