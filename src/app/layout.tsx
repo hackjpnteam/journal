@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import Script from 'next/script'
 import './globals.css'
 import { Providers } from './providers'
 
@@ -16,6 +17,12 @@ export default function RootLayout({
     <html lang="ja">
       <body className="antialiased">
         <Providers>{children}</Providers>
+        <Script
+          src="https://saleschat.me/widget.js"
+          data-company-id="bc7965a1-e857-4822-82b9-149fa80555df"
+          data-widget-base-url="https://saleschat.me/widget"
+          strategy="lazyOnload"
+        />
       </body>
     </html>
   )
