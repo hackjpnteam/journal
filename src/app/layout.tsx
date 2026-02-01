@@ -18,10 +18,20 @@ export default function RootLayout({
       <body className="antialiased">
         <Providers>{children}</Providers>
         <Script
-          src="https://saleschat.me/widget.js"
-          data-company-id="bc7965a1-e857-4822-82b9-149fa80555df"
-          data-widget-base-url="https://saleschat.me/widget"
-          strategy="lazyOnload"
+          id="saleschat-widget"
+          strategy="afterInteractive"
+          dangerouslySetInnerHTML={{
+            __html: `
+              (function() {
+                var script = document.createElement('script');
+                script.src = 'https://saleschat.me/widget.js';
+                script.setAttribute('data-company-id', 'bc7965a1-e857-4822-82b9-149fa80555df');
+                script.setAttribute('data-widget-base-url', 'https://saleschat.me/widget');
+                script.defer = true;
+                document.body.appendChild(script);
+              })();
+            `,
+          }}
         />
       </body>
     </html>
