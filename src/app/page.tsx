@@ -170,6 +170,31 @@ export default function HomePage() {
             </Link>
           </Card>
         )}
+
+        {/* コーチ・管理者向けナビゲーション */}
+        {(session?.user?.role === 'coach' || session?.user?.role === 'superadmin') && (
+          <Card>
+            <CardTitle>管理メニュー</CardTitle>
+            <div className="flex flex-wrap gap-3">
+              <Link
+                href="/coach"
+                className="inline-flex items-center gap-2 bg-[#4a3f42] hover:bg-[#3a2f32] text-white font-medium px-4 py-2 rounded-xl transition"
+              >
+                <span>📝</span>
+                <span>コーチページ</span>
+              </Link>
+              {session?.user?.role === 'superadmin' && (
+                <Link
+                  href="/admin"
+                  className="inline-flex items-center gap-2 bg-[#d46a7e] hover:bg-[#c25a6e] text-white font-medium px-4 py-2 rounded-xl transition"
+                >
+                  <span>⚙️</span>
+                  <span>管理者ページ</span>
+                </Link>
+              )}
+            </div>
+          </Card>
+        )}
       </main>
     </div>
   )
