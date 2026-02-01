@@ -240,9 +240,15 @@ export default function HomePage() {
           ) : (
             <div className="space-y-4">
               {timeline.map((item) => (
-                <Card
+                <div
                   key={item.id}
-                  className={item.userId === session?.user?.id ? 'border-2 border-[#d46a7e]/30' : ''}
+                  className={`rounded-2xl p-4 shadow-sm ${
+                    item.type === 'morning'
+                      ? 'bg-gradient-to-br from-white to-[#fff5f7] border-l-4 border-[#d46a7e]'
+                      : item.type === 'night'
+                      ? 'bg-gradient-to-br from-[#2d2438] to-[#1a1625] text-white border-l-4 border-[#9b7bb8]'
+                      : 'bg-gradient-to-br from-white to-blue-50 border-l-4 border-blue-400'
+                  } ${item.userId === session?.user?.id ? 'ring-2 ring-[#d46a7e]/30' : ''}`}
                 >
                   {/* ヘッダー */}
                   <div className="flex items-center gap-3 mb-3">
@@ -253,7 +259,10 @@ export default function HomePage() {
                         className="w-10 h-10 rounded-full object-cover"
                       />
                     ) : (
-                      <div className="w-10 h-10 rounded-full bg-[#d46a7e]/20 flex items-center justify-center">
+                      <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                        item.type === 'morning' ? 'bg-[#d46a7e]/20' :
+                        item.type === 'night' ? 'bg-[#9b7bb8]/30' : 'bg-blue-100'
+                      }`}>
                         <span className="text-lg">
                           {item.type === 'morning' ? '☀️' : item.type === 'night' ? '🌙' : '🎯'}
                         </span>
@@ -261,19 +270,22 @@ export default function HomePage() {
                     )}
                     <div className="flex-1">
                       <div className="flex items-center gap-2">
-                        <span className="font-medium text-[#4a3f42]">{item.userName}</span>
+                        <span className={`font-medium ${item.type === 'night' ? 'text-white' : 'text-[#4a3f42]'}`}>
+                          {item.userName}
+                        </span>
                         {item.type === 'morning' && item.mood && (
                           <span className="text-lg">{MOOD_EMOJI[item.mood]}</span>
                         )}
                       </div>
-                      <div className="flex items-center gap-2 text-xs text-[#4a3f42]/50">
+                      <div className={`flex items-center gap-2 text-xs ${item.type === 'night' ? 'text-white/60' : 'text-[#4a3f42]/50'}`}>
                         <span className={
                           item.type === 'morning' ? 'text-[#d46a7e]' :
-                          item.type === 'okr' ? 'text-blue-600' : 'text-[#4a3f42]'
+                          item.type === 'night' ? 'text-[#c9a0dc]' :
+                          'text-blue-600'
                         }>
-                          {item.type === 'morning' ? '朝の投稿' :
-                           item.type === 'night' ? '夜の投稿' :
-                           item.okrType === 'weekly' ? '週間OKR' : '月間OKR'}
+                          {item.type === 'morning' ? '☀️ 朝の投稿' :
+                           item.type === 'night' ? '🌙 夜の投稿' :
+                           item.okrType === 'weekly' ? '🎯 週間OKR' : '🎯 月間OKR'}
                         </span>
                         <span>•</span>
                         <span>{formatTimeAgo(item.createdAt)}</span>
@@ -299,26 +311,26 @@ export default function HomePage() {
                     <div className="space-y-2">
                       {item.proudChoice && (
                         <div>
-                          <p className="text-xs text-[#4a3f42]/50">誇れる選択</p>
-                          <p className="text-[#4a3f42]">{item.proudChoice}</p>
+                          <p className="text-xs text-white/50">誇れる選択</p>
+                          <p className="text-white/90">{item.proudChoice}</p>
                         </div>
                       )}
                       {item.learning && (
                         <div>
-                          <p className="text-xs text-[#4a3f42]/50">学び</p>
-                          <p className="text-[#4a3f42]">{item.learning}</p>
+                          <p className="text-xs text-white/50">学び</p>
+                          <p className="text-white/90">{item.learning}</p>
                         </div>
                       )}
                       {item.tomorrowMessage && (
-                        <div className="bg-[#f0e8eb] rounded-lg p-3 mt-2">
-                          <p className="text-xs text-[#4a3f42]/50 mb-1">明日の自分へ</p>
-                          <p className="text-[#4a3f42] font-medium">{item.tomorrowMessage}</p>
+                        <div className="bg-white/10 rounded-lg p-3 mt-2">
+                          <p className="text-xs text-white/50 mb-1">明日の自分へ</p>
+                          <p className="text-white font-medium">{item.tomorrowMessage}</p>
                         </div>
                       )}
                       {item.selfScore && (
                         <div className="flex items-center gap-2 mt-2">
-                          <span className="text-sm text-[#4a3f42]/50">今日の点数:</span>
-                          <span className="text-lg font-bold text-[#d46a7e]">{item.selfScore}/10</span>
+                          <span className="text-sm text-white/50">今日の点数:</span>
+                          <span className="text-lg font-bold text-[#c9a0dc]">{item.selfScore}/10</span>
                         </div>
                       )}
                     </div>
@@ -348,17 +360,19 @@ export default function HomePage() {
 
                   {/* superadmin用削除ボタン */}
                   {session?.user?.role === 'superadmin' && (
-                    <div className="mt-3 pt-3 border-t border-[#d46a7e]/20">
+                    <div className={`mt-3 pt-3 border-t ${item.type === 'night' ? 'border-white/20' : 'border-[#d46a7e]/20'}`}>
                       <button
                         onClick={() => handleDeletePost(item.id, item.type)}
                         disabled={deleting === item.id}
-                        className="text-xs text-red-500 hover:text-red-700 disabled:opacity-50"
+                        className={`text-xs disabled:opacity-50 ${
+                          item.type === 'night' ? 'text-red-300 hover:text-red-200' : 'text-red-500 hover:text-red-700'
+                        }`}
                       >
                         {deleting === item.id ? '削除中...' : '🗑️ この投稿を削除'}
                       </button>
                     </div>
                   )}
-                </Card>
+                </div>
               ))}
             </div>
           )}
