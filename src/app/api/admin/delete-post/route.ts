@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { connectDB } from '@/lib/db'
+import { isValidObjectId } from '@/lib/validation'
 import { DailyShare } from '@/models/DailyShare'
 import { NightJournal } from '@/models/NightJournal'
 import { OKR } from '@/models/OKR'
@@ -22,8 +23,13 @@ export async function DELETE(req: NextRequest) {
     const postId = searchParams.get('id')
     const postType = searchParams.get('type')
 
-    if (!postId || !postType) {
-      return NextResponse.json({ error: 'id と type が必要です' }, { status: 400 })
+    // ObjectId形式のバリデーション
+    if (!isValidObjectId(postId)) {
+      return NextResponse.json({ error: '無効なIDです' }, { status: 400 })
+    }
+
+    if (!postType) {
+      return NextResponse.json({ error: 'type が必要です' }, { status: 400 })
     }
 
     await connectDB()

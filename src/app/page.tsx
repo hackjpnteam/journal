@@ -9,6 +9,13 @@ import { MOOD_EMOJI, type Mood } from '@/lib/constants'
 import { format } from 'date-fns'
 import { ja } from 'date-fns/locale'
 
+interface CheerData {
+  id: string
+  userId: string
+  userName: string
+  userImage: string | null
+}
+
 interface TimelineItem {
   id: string
   type: 'morning' | 'night' | 'okr'
@@ -16,6 +23,7 @@ interface TimelineItem {
   userName: string
   userImage: string | null
   createdAt: string
+  cheers: CheerData[]
   // Morning fields
   mood?: Mood
   declaration?: string
@@ -54,6 +62,7 @@ export default function HomePage() {
   const [weeklyOKR, setWeeklyOKR] = useState<OKRData | null>(null)
   const [loading, setLoading] = useState(true)
   const [deleting, setDeleting] = useState<string | null>(null)
+  const [cheeringPost, setCheeringPost] = useState<string | null>(null)
 
   const today = format(new Date(), 'yyyy年M月d日（E）', { locale: ja })
   const currentHour = new Date().getHours()
@@ -122,6 +131,50 @@ export default function HomePage() {
       alert('エラーが発生しました')
     } finally {
       setDeleting(null)
+    }
+  }
+
+  const handleCheer = async (postId: string, postType: string, hasUserCheered: boolean) => {
+    if (!session?.user) return
+
+    setCheeringPost(postId)
+    try {
+      if (hasUserCheered) {
+        // 応援を取り消す
+        const res = await fetch(`/api/cheer?postId=${postId}`, {
+          method: 'DELETE',
+        })
+        if (res.ok) {
+          setTimeline(prev =>
+            prev.map(item =>
+              item.id === postId
+                ? { ...item, cheers: item.cheers.filter(c => c.userId !== session.user?.id) }
+                : item
+            )
+          )
+        }
+      } else {
+        // 応援する
+        const res = await fetch('/api/cheer', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ postId, postType }),
+        })
+        if (res.ok) {
+          const data = await res.json()
+          setTimeline(prev =>
+            prev.map(item =>
+              item.id === postId
+                ? { ...item, cheers: [...item.cheers, data.cheer] }
+                : item
+            )
+          )
+        }
+      }
+    } catch (error) {
+      console.error('Cheer error:', error)
+    } finally {
+      setCheeringPost(null)
     }
   }
 
@@ -358,9 +411,79 @@ export default function HomePage() {
                     </div>
                   )}
 
+                  {/* 応援セクション */}
+                  {(() => {
+                    const hasUserCheered = item.cheers.some(c => c.userId === session?.user?.id)
+                    return (
+                      <div className={`mt-3 pt-3 border-t ${item.type === 'night' ? 'border-white/20' : 'border-gray-200'}`}>
+                        <div className="flex items-center gap-3">
+                          <button
+                            onClick={() => handleCheer(item.id, item.type, hasUserCheered)}
+                            disabled={cheeringPost === item.id}
+                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm transition disabled:opacity-50 ${
+                              hasUserCheered
+                                ? item.type === 'night'
+                                  ? 'bg-pink-500/30 text-pink-200'
+                                  : 'bg-pink-100 text-pink-600'
+                                : item.type === 'night'
+                                ? 'bg-white/10 text-white/70 hover:bg-white/20'
+                                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                            }`}
+                          >
+                            <span className="text-base">{hasUserCheered ? '🎉' : '👏'}</span>
+                            <span>{hasUserCheered ? '応援中' : '応援する'}</span>
+                            {item.cheers.length > 0 && (
+                              <span className={`ml-1 font-medium ${
+                                item.type === 'night' ? 'text-white/90' : 'text-[#d46a7e]'
+                              }`}>
+                                {item.cheers.length}
+                              </span>
+                            )}
+                          </button>
+
+                          {/* 応援者のアバター */}
+                          {item.cheers.length > 0 && (
+                            <div className="flex items-center">
+                              <div className="flex -space-x-2">
+                                {item.cheers.slice(0, 5).map((cheer) => (
+                                  <div key={cheer.id} className="relative group">
+                                    {cheer.userImage ? (
+                                      <img
+                                        src={cheer.userImage}
+                                        alt={cheer.userName}
+                                        className="w-7 h-7 rounded-full border-2 border-white object-cover"
+                                      />
+                                    ) : (
+                                      <div className={`w-7 h-7 rounded-full border-2 border-white flex items-center justify-center text-xs font-medium ${
+                                        item.type === 'night' ? 'bg-purple-400 text-white' : 'bg-[#d46a7e]/20 text-[#d46a7e]'
+                                      }`}>
+                                        {cheer.userName.charAt(0)}
+                                      </div>
+                                    )}
+                                    {/* ホバー時に名前を表示 */}
+                                    <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 px-2 py-1 bg-gray-800 text-white text-xs rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition pointer-events-none z-10">
+                                      {cheer.userName}
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                              {item.cheers.length > 5 && (
+                                <span className={`ml-2 text-xs ${
+                                  item.type === 'night' ? 'text-white/60' : 'text-gray-500'
+                                }`}>
+                                  +{item.cheers.length - 5}人
+                                </span>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )
+                  })()}
+
                   {/* superadmin用削除ボタン */}
                   {session?.user?.role === 'superadmin' && (
-                    <div className={`mt-3 pt-3 border-t ${item.type === 'night' ? 'border-white/20' : 'border-[#d46a7e]/20'}`}>
+                    <div className={`mt-2 pt-2 border-t ${item.type === 'night' ? 'border-white/20' : 'border-[#d46a7e]/20'}`}>
                       <button
                         onClick={() => handleDeletePost(item.id, item.type)}
                         disabled={deleting === item.id}

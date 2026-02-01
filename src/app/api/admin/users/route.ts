@@ -6,6 +6,9 @@ import { User } from '@/models/User'
 import { DailyShare } from '@/models/DailyShare'
 import { NightJournal } from '@/models/NightJournal'
 
+// サービス開始日
+const SERVICE_START_DATE = new Date('2026-02-02')
+
 export async function GET() {
   try {
     const session = await getServerSession(authOptions)
@@ -19,22 +22,32 @@ export async function GET() {
 
     await connectDB()
 
+    // サービス開始からの日数を計算
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    const daysSinceLaunch = Math.max(1, Math.floor((today.getTime() - SERVICE_START_DATE.getTime()) / (1000 * 60 * 60 * 24)) + 1)
+
     // 全ユーザーを取得（サンプル・テストユーザーを除外）
     const users = await User.find({
       email: { $not: /sample|test|example/i }
     }).sort({ createdAt: -1 })
 
-    // 過去30日間の日付キーを生成
+    // サービス開始日以降の日付キーを生成（最大30日）
+    const effectiveDays = Math.min(daysSinceLaunch, 30)
     const last30Days: string[] = []
-    for (let i = 0; i < 30; i++) {
+    for (let i = 0; i < effectiveDays; i++) {
       const date = new Date()
       date.setDate(date.getDate() - i)
-      const dateKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
-      last30Days.push(dateKey)
+      // サービス開始日より前の日付はスキップ
+      if (date >= SERVICE_START_DATE) {
+        const dateKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
+        last30Days.push(dateKey)
+      }
     }
 
-    // 過去7日間の日付キー
-    const last7Days = last30Days.slice(0, 7)
+    // 過去7日間またはサービス開始からの日数（どちらか短い方）
+    const effective7Days = Math.min(daysSinceLaunch, 7)
+    const last7Days = last30Days.slice(0, effective7Days)
 
     // 各ユーザーの統計を取得
     const userStats = await Promise.all(
@@ -71,29 +84,53 @@ export async function GET() {
           .filter(Boolean)
           .sort((a, b) => new Date(b!).getTime() - new Date(a!).getTime())[0]
 
-        // カスタマーヘルススコア計算
-        // - 過去7日の投稿頻度 (40%)
-        // - 過去30日の投稿頻度 (30%)
-        // - 継続性 (30%)
-        const freq7Score = Math.min(((morning7 + night7) / 14) * 100, 100) * 0.4
-        const freq30Score = Math.min(((morning30 + night30) / 60) * 100, 100) * 0.3
+        // カスタマーヘルススコア計算（サービス開始日を考慮）
+        // - 投稿頻度スコア (50%): サービス開始からの日数に対する投稿率
+        // - 継続性スコア (50%): 最後のアクティビティからの日数
 
-        // 最後のアクティビティからの日数
+        // ユーザー登録日とサービス開始日のどちらか遅い方からの日数
+        const userStartDate = new Date(user.createdAt) > SERVICE_START_DATE
+          ? new Date(user.createdAt)
+          : SERVICE_START_DATE
+        userStartDate.setHours(0, 0, 0, 0)
+        const userDays = Math.max(1, Math.floor((today.getTime() - userStartDate.getTime()) / (1000 * 60 * 60 * 24)) + 1)
+
+        // 投稿頻度スコア: ユーザーの有効日数に対する投稿率
+        // 1日2回（朝・夜）が満点
+        const maxPossiblePosts = userDays * 2
+        const actualPosts = totalMorning + totalNight
+        const frequencyScore = Math.min((actualPosts / maxPossiblePosts) * 100, 100) * 0.5
+
+        // 継続性スコア: 最後のアクティビティからの日数
         let recencyScore = 0
         if (lastActivity) {
           const daysSinceLastActivity = Math.floor(
             (Date.now() - new Date(lastActivity).getTime()) / (1000 * 60 * 60 * 24)
           )
-          if (daysSinceLastActivity === 0) recencyScore = 100
-          else if (daysSinceLastActivity === 1) recencyScore = 90
-          else if (daysSinceLastActivity <= 3) recencyScore = 70
-          else if (daysSinceLastActivity <= 7) recencyScore = 50
-          else if (daysSinceLastActivity <= 14) recencyScore = 30
-          else recencyScore = 10
+          // サービス開始から日が浅い場合は寛容に
+          if (daysSinceLaunch <= 3) {
+            // 開始3日以内: アクティビティがあれば高スコア
+            if (daysSinceLastActivity === 0) recencyScore = 100
+            else if (daysSinceLastActivity === 1) recencyScore = 80
+            else recencyScore = 50
+          } else {
+            // 通常時
+            if (daysSinceLastActivity === 0) recencyScore = 100
+            else if (daysSinceLastActivity === 1) recencyScore = 90
+            else if (daysSinceLastActivity <= 3) recencyScore = 70
+            else if (daysSinceLastActivity <= 7) recencyScore = 50
+            else if (daysSinceLastActivity <= 14) recencyScore = 30
+            else recencyScore = 10
+          }
+        } else {
+          // 一度も投稿がない場合でも、登録直後なら猶予を与える
+          if (userDays <= 1) recencyScore = 50
+          else if (userDays <= 3) recencyScore = 30
+          else recencyScore = 0
         }
-        recencyScore *= 0.3
+        recencyScore *= 0.5
 
-        const healthScore = Math.round(freq7Score + freq30Score + recencyScore)
+        const healthScore = Math.round(frequencyScore + recencyScore)
 
         return {
           id: user._id.toString(),
@@ -115,11 +152,20 @@ export async function GET() {
       })
     )
 
-    // 日別投稿数（過去7日間）
+    // 実ユーザーのIDリストを取得（サンプル・テストユーザーを除外）
+    const realUserIds = users.map(u => u._id)
+
+    // 日別投稿数（過去7日間）- 実ユーザーのみ
     const dailyStats = await Promise.all(
       last7Days.map(async (dateKey) => {
-        const morningCount = await DailyShare.countDocuments({ dateKey })
-        const nightCount = await NightJournal.countDocuments({ dateKey })
+        const morningCount = await DailyShare.countDocuments({
+          dateKey,
+          userId: { $in: realUserIds }
+        })
+        const nightCount = await NightJournal.countDocuments({
+          dateKey,
+          userId: { $in: realUserIds }
+        })
         return {
           date: dateKey,
           morning: morningCount,
@@ -129,14 +175,20 @@ export async function GET() {
       })
     )
 
-    // 今日の統計
+    // 今日の統計 - 実ユーザーのみ
     const todayKey = last7Days[0]
-    const todayMorning = await DailyShare.countDocuments({ dateKey: todayKey })
-    const todayNight = await NightJournal.countDocuments({ dateKey: todayKey })
+    const todayMorning = await DailyShare.countDocuments({
+      dateKey: todayKey,
+      userId: { $in: realUserIds }
+    })
+    const todayNight = await NightJournal.countDocuments({
+      dateKey: todayKey,
+      userId: { $in: realUserIds }
+    })
 
-    // 総投稿数
-    const totalMorningPosts = await DailyShare.countDocuments({})
-    const totalNightPosts = await NightJournal.countDocuments({})
+    // 総投稿数 - 実ユーザーのみ
+    const totalMorningPosts = await DailyShare.countDocuments({ userId: { $in: realUserIds } })
+    const totalNightPosts = await NightJournal.countDocuments({ userId: { $in: realUserIds } })
 
     // ヘルススコア分布
     const healthDistribution = {

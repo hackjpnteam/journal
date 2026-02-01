@@ -66,7 +66,7 @@ export async function PUT(req: NextRequest) {
         return NextResponse.json({ error: '現在のパスワードが正しくありません' }, { status: 400 })
       }
 
-      user.passwordHash = await bcrypt.hash(data.newPassword, 10)
+      user.passwordHash = await bcrypt.hash(data.newPassword, 12)
     }
 
     // 名前の更新

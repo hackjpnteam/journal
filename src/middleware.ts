@@ -26,6 +26,11 @@ export default withAuth(
       return NextResponse.redirect(new URL('/', req.url))
     }
 
+    // /admin と /api/admin/* は superadmin のみ
+    if ((pathname.startsWith('/admin') || pathname.startsWith('/api/admin')) && token.role !== 'superadmin') {
+      return NextResponse.redirect(new URL('/', req.url))
+    }
+
     return NextResponse.next()
   },
   {
@@ -36,5 +41,18 @@ export default withAuth(
 )
 
 export const config = {
-  matcher: ['/', '/onboarding', '/share', '/calendar', '/okr', '/coach/:path*', '/api/coach/:path*'],
+  matcher: [
+    '/',
+    '/onboarding',
+    '/share',
+    '/calendar',
+    '/okr',
+    '/night',
+    '/profile',
+    '/coach/:path*',
+    '/admin/:path*',
+    '/api/coach/:path*',
+    '/api/admin/:path*',
+    '/api/profile/:path*',
+  ],
 }

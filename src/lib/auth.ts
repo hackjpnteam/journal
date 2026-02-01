@@ -30,11 +30,12 @@ export const authOptions: NextAuthOptions = {
         }
 
         // 環境変数に基づいてロールを更新
-        const superadminEmail = process.env.SUPERADMIN_EMAIL
+        // SUPERADMIN_EMAIL はカンマ区切りで複数指定可能
+        const superadminEmails = process.env.SUPERADMIN_EMAIL?.split(',').map(e => e.trim()) || []
         const coachEmail = process.env.COACH_EMAIL
         let role = user.role
 
-        if (superadminEmail && user.email === superadminEmail && user.role !== 'superadmin') {
+        if (superadminEmails.includes(user.email) && user.role !== 'superadmin') {
           role = 'superadmin'
           await User.findByIdAndUpdate(user._id, { role: 'superadmin' })
         } else if (coachEmail && user.email === coachEmail && user.role === 'member') {
