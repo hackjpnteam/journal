@@ -13,6 +13,7 @@ interface OKRData {
   keyResults: string[]
   focus?: string
   identityFocus?: string
+  isShared?: boolean
 }
 
 export default function OKRPage() {
@@ -29,6 +30,7 @@ export default function OKRPage() {
   const [kr3, setKr3] = useState('')
   const [focus, setFocus] = useState('')
   const [identityFocus, setIdentityFocus] = useState('')
+  const [isShared, setIsShared] = useState(false)
 
   const getPeriodKey = () => {
     if (viewType === 'monthly') {
@@ -83,6 +85,7 @@ export default function OKRPage() {
             setKr3(data.keyResults?.[2] || '')
             setFocus(data.focus || '')
             setIdentityFocus(data.identityFocus || '')
+            setIsShared(data.isShared || false)
           } else {
             setObjective('')
             setKr1('')
@@ -90,6 +93,7 @@ export default function OKRPage() {
             setKr3('')
             setFocus('')
             setIdentityFocus('')
+            setIsShared(false)
           }
         }
       } catch (error) {
@@ -122,6 +126,7 @@ export default function OKRPage() {
           keyResults: [kr1, kr2, kr3],
           focus: viewType === 'weekly' ? focus : undefined,
           identityFocus: viewType === 'monthly' ? identityFocus : undefined,
+          isShared,
         }),
       })
 
@@ -261,6 +266,19 @@ export default function OKRPage() {
                   />
                 </div>
               )}
+
+              <div className="flex items-center gap-2 pt-2">
+                <input
+                  type="checkbox"
+                  id="isShared"
+                  checked={isShared}
+                  onChange={(e) => setIsShared(e.target.checked)}
+                  className="w-4 h-4 text-[#d46a7e] border-[#d46a7e]/30 rounded focus:ring-[#d46a7e]"
+                />
+                <label htmlFor="isShared" className="text-sm text-[#4a3f42]">
+                  みんなに公開する
+                </label>
+              </div>
 
               {error && (
                 <div className="text-red-500 text-sm text-center">{error}</div>

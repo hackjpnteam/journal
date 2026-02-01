@@ -5,6 +5,7 @@ import { connectDB } from '@/lib/db'
 import { User } from '@/models/User'
 import { DailyShare } from '@/models/DailyShare'
 import { NightJournal } from '@/models/NightJournal'
+import { OKR } from '@/models/OKR'
 
 export async function GET() {
   try {
@@ -29,11 +30,18 @@ export async function GET() {
       createdAt: { $gte: sevenDaysAgo }
     }).sort({ createdAt: -1 }).limit(50)
 
+    // 公開OKRを取得
+    const sharedOKRs = await OKR.find({
+      isShared: true,
+      updatedAt: { $gte: sevenDaysAgo }
+    }).sort({ updatedAt: -1 }).limit(30)
+
     // ユーザー情報を取得
     const userIds = [
       ...new Set([
         ...morningPosts.map(p => p.userId.toString()),
-        ...nightPosts.map(p => p.userId.toString())
+        ...nightPosts.map(p => p.userId.toString()),
+        ...sharedOKRs.map(o => o.userId.toString())
       ])
     ]
     const users = await User.find({ _id: { $in: userIds } })
@@ -70,6 +78,23 @@ export async function GET() {
           tomorrowMessage: post.tomorrowMessage,
           selfScore: post.selfScore,
           createdAt: post.createdAt,
+        }
+      }),
+      ...sharedOKRs.map(okr => {
+        const user = userMap.get(okr.userId.toString())
+        return {
+          id: okr._id.toString(),
+          type: 'okr' as const,
+          userId: okr.userId.toString(),
+          userName: user?.name || '不明',
+          userImage: user?.profileImage || null,
+          okrType: okr.type,
+          periodKey: okr.periodKey,
+          objective: okr.objective,
+          keyResults: okr.keyResults,
+          focus: okr.focus,
+          identityFocus: okr.identityFocus,
+          createdAt: okr.updatedAt,
         }
       }),
     ].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())

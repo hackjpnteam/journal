@@ -12,6 +12,7 @@ const okrSchema = z.object({
   keyResults: z.array(z.string()).max(3),
   focus: z.string().optional(),
   identityFocus: z.string().optional(),
+  isShared: z.boolean().optional(),
 })
 
 export async function GET(req: NextRequest) {

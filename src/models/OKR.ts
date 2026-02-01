@@ -9,6 +9,7 @@ export interface IOKR extends Document {
   keyResults: string[]
   focus?: string
   identityFocus?: string
+  isShared: boolean
   createdAt: Date
   updatedAt: Date
 }
@@ -22,6 +23,7 @@ const OKRSchema = new Schema<IOKR>(
     keyResults: { type: [String], default: [] },
     focus: { type: String },
     identityFocus: { type: String },
+    isShared: { type: Boolean, default: false },
   },
   { timestamps: true }
 )

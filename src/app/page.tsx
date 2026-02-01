@@ -11,7 +11,7 @@ import { ja } from 'date-fns/locale'
 
 interface TimelineItem {
   id: string
-  type: 'morning' | 'night'
+  type: 'morning' | 'night' | 'okr'
   userId: string
   userName: string
   userImage: string | null
@@ -27,6 +27,13 @@ interface TimelineItem {
   learning?: string
   tomorrowMessage?: string
   selfScore?: number
+  // OKR fields
+  okrType?: 'weekly' | 'monthly'
+  periodKey?: string
+  objective?: string
+  keyResults?: string[]
+  focus?: string
+  identityFocus?: string
 }
 
 interface CoachingNote {
@@ -226,7 +233,7 @@ export default function HomePage() {
                     ) : (
                       <div className="w-10 h-10 rounded-full bg-[#d46a7e]/20 flex items-center justify-center">
                         <span className="text-lg">
-                          {item.type === 'morning' ? '☀️' : '🌙'}
+                          {item.type === 'morning' ? '☀️' : item.type === 'night' ? '🌙' : '🎯'}
                         </span>
                       </div>
                     )}
@@ -238,8 +245,13 @@ export default function HomePage() {
                         )}
                       </div>
                       <div className="flex items-center gap-2 text-xs text-[#4a3f42]/50">
-                        <span className={item.type === 'morning' ? 'text-[#d46a7e]' : 'text-[#4a3f42]'}>
-                          {item.type === 'morning' ? '朝の投稿' : '夜の投稿'}
+                        <span className={
+                          item.type === 'morning' ? 'text-[#d46a7e]' :
+                          item.type === 'okr' ? 'text-blue-600' : 'text-[#4a3f42]'
+                        }>
+                          {item.type === 'morning' ? '朝の投稿' :
+                           item.type === 'night' ? '夜の投稿' :
+                           item.okrType === 'weekly' ? '週間OKR' : '月間OKR'}
                         </span>
                         <span>•</span>
                         <span>{formatTimeAgo(item.createdAt)}</span>
@@ -261,7 +273,7 @@ export default function HomePage() {
                         </div>
                       )}
                     </div>
-                  ) : (
+                  ) : item.type === 'night' ? (
                     <div className="space-y-2">
                       {item.proudChoice && (
                         <div>
@@ -286,6 +298,28 @@ export default function HomePage() {
                           <span className="text-sm text-[#4a3f42]/50">今日の点数:</span>
                           <span className="text-lg font-bold text-[#d46a7e]">{item.selfScore}/10</span>
                         </div>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      <div className="bg-blue-50 rounded-lg p-3">
+                        <p className="text-xs text-blue-600/70 mb-1">
+                          {item.okrType === 'weekly' ? '今週の目標' : '今月の目標'}
+                        </p>
+                        <p className="text-[#4a3f42] font-medium">{item.objective}</p>
+                      </div>
+                      {item.keyResults && item.keyResults.filter(kr => kr).length > 0 && (
+                        <ul className="text-sm text-[#4a3f42]/70 space-y-1 pl-2 border-l-2 border-blue-300">
+                          {item.keyResults.filter(kr => kr).map((kr, i) => (
+                            <li key={i}>• {kr}</li>
+                          ))}
+                        </ul>
+                      )}
+                      {item.focus && (
+                        <p className="text-sm text-blue-600">Focus: {item.focus}</p>
+                      )}
+                      {item.identityFocus && (
+                        <p className="text-sm text-blue-600">Identity: {item.identityFocus}</p>
                       )}
                     </div>
                   )}
