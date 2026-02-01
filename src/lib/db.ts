@@ -1,9 +1,11 @@
 import mongoose from 'mongoose'
 
-const MONGODB_URI = process.env.MONGODB_URI || process.env.DATABASE_URL
-
-if (!MONGODB_URI) {
-  throw new Error('MONGODB_URI または DATABASE_URL が .env.local に設定されていません')
+function getMongoURI(): string {
+  const uri = process.env.MONGODB_URI || process.env.DATABASE_URL
+  if (!uri) {
+    throw new Error('MONGODB_URI または DATABASE_URL が .env.local に設定されていません')
+  }
+  return uri
 }
 
 interface MongooseCache {
@@ -28,7 +30,7 @@ export async function connectDB() {
   }
 
   if (!cached.promise) {
-    cached.promise = mongoose.connect(MONGODB_URI).then((mongoose) => {
+    cached.promise = mongoose.connect(getMongoURI()).then((mongoose) => {
       return mongoose
     })
   }
