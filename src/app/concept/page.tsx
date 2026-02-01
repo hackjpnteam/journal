@@ -8,7 +8,7 @@ export default function ConceptPage() {
 
   return (
     <div className="min-h-screen bg-[#f0e8eb]">
-      {session && <TopBar />}
+      <TopBar />
 
       <div className="max-w-2xl mx-auto px-6 py-12">
         {/* Header */}
