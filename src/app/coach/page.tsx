@@ -34,6 +34,7 @@ export default function CoachPage() {
     redline: string
     question: string
   } | null>(null)
+  const [successMessage, setSuccessMessage] = useState('')
 
   const today = format(new Date(), 'yyyy年M月d日（E）', { locale: ja })
 
@@ -98,6 +99,8 @@ export default function CoachPage() {
           )
         )
         setEditingNote(null)
+        setSuccessMessage('保存しました')
+        setTimeout(() => setSuccessMessage(''), 3000)
       }
     } catch (error) {
       console.error('Failed to save note:', error)
@@ -114,6 +117,11 @@ export default function CoachPage() {
         <div className="text-center py-4">
           <p className="text-[#d46a7e] text-sm font-medium">Coach Dashboard</p>
           <h1 className="text-xl font-semibold mt-1 text-[#4a3f42]">{today}</h1>
+          {successMessage && (
+            <p className="text-sm mt-2 text-green-600 bg-green-50 px-4 py-2 rounded-lg inline-block">
+              {successMessage}
+            </p>
+          )}
         </div>
 
         {loading ? (
@@ -209,7 +217,7 @@ export default function CoachPage() {
                         type="button"
                         onClick={saveNote}
                         disabled={savingFor === share.userId}
-                        className="flex-1"
+                        className="flex-1 btn-primary"
                       >
                         {savingFor === share.userId ? '保存中...' : '保存'}
                       </button>

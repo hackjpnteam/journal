@@ -11,6 +11,7 @@ const navItems = [
   { href: '/night', label: '夜' },
   { href: '/calendar', label: 'カレンダー' },
   { href: '/okr', label: 'OKR' },
+  { href: '/concept', label: 'コンセプト' },
   { href: '/profile', label: 'マイページ' },
 ]
 

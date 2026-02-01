@@ -21,6 +21,7 @@ export default function OKRPage() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
+  const [successMessage, setSuccessMessage] = useState('')
 
   const [objective, setObjective] = useState('')
   const [kr1, setKr1] = useState('')
@@ -127,6 +128,9 @@ export default function OKRPage() {
       const data = await res.json()
       if (!res.ok) {
         setError(data.error || '保存に失敗しました')
+      } else {
+        setSuccessMessage('保存しました')
+        setTimeout(() => setSuccessMessage(''), 3000)
       }
     } catch {
       setError('エラーが発生しました')
@@ -262,11 +266,17 @@ export default function OKRPage() {
                 <div className="text-red-500 text-sm text-center">{error}</div>
               )}
 
+              {successMessage && (
+                <div className="text-green-600 text-sm text-center bg-green-50 px-4 py-2 rounded-lg">
+                  {successMessage}
+                </div>
+              )}
+
               <button
                 type="button"
                 onClick={handleSave}
                 disabled={saving}
-                className="w-full"
+                className="w-full btn-primary"
               >
                 {saving ? '保存中...' : '保存'}
               </button>

@@ -28,7 +28,7 @@ export default function ConceptPage() {
           <div className="space-y-6 text-[#4a3f42] leading-relaxed">
             <p>
               最高の自分の人生を送るために、<br />
-              僕は「朝」を一番大切にしています。
+              朝を大切にすることが大切です。
             </p>
             <p>
               人生は、<br />

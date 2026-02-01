@@ -29,11 +29,24 @@ export const authOptions: NextAuthOptions = {
           throw new Error('パスワードが正しくありません')
         }
 
+        // 環境変数に基づいてロールを更新
+        const superadminEmail = process.env.SUPERADMIN_EMAIL
+        const coachEmail = process.env.COACH_EMAIL
+        let role = user.role
+
+        if (superadminEmail && user.email === superadminEmail && user.role !== 'superadmin') {
+          role = 'superadmin'
+          await User.findByIdAndUpdate(user._id, { role: 'superadmin' })
+        } else if (coachEmail && user.email === coachEmail && user.role === 'member') {
+          role = 'coach'
+          await User.findByIdAndUpdate(user._id, { role: 'coach' })
+        }
+
         return {
           id: user._id.toString(),
           email: user.email,
           name: user.name,
-          role: user.role,
+          role,
           onboardingCompleted: user.onboardingCompleted,
         }
       },

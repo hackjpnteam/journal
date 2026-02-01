@@ -89,6 +89,7 @@ export default function NightPage() {
   const [hasPosted, setHasPosted] = useState(false)
   const [isEditing, setIsEditing] = useState(false)
   const [windowStatus, setWindowStatus] = useState<WindowStatus>('before')
+  const [successMessage, setSuccessMessage] = useState('')
 
   const today = format(new Date(), 'yyyy年M月d日（E）', { locale: ja })
 
@@ -179,6 +180,8 @@ export default function NightPage() {
       setMyJournal(data)
       setHasPosted(true)
       setIsEditing(false)
+      setSuccessMessage('保存しました')
+      setTimeout(() => setSuccessMessage(''), 3000)
 
       const refreshRes = await fetch('/api/night')
       if (refreshRes.ok) {
@@ -226,6 +229,11 @@ export default function NightPage() {
           >
             {getWindowMessage()}
           </p>
+          {successMessage && (
+            <p className="text-sm mt-2 text-green-600 bg-green-50 px-4 py-2 rounded-lg inline-block">
+              {successMessage}
+            </p>
+          )}
         </div>
 
         {(!hasPosted || isEditing) && (

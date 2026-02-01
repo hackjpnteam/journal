@@ -231,7 +231,7 @@ export default function MyPage() {
         <button
           onClick={handleSaveProfile}
           disabled={saving}
-          className="w-full"
+          className="w-full btn-primary"
         >
           {saving ? '保存中...' : 'プロフィールを保存'}
         </button>
@@ -273,7 +273,7 @@ export default function MyPage() {
               type="button"
               onClick={handleChangePassword}
               disabled={saving || !currentPassword || !newPassword || !confirmPassword}
-              className="w-full bg-[#4a3f42] hover:bg-[#3a2f32] disabled:opacity-50"
+              className="w-full btn-secondary"
             >
               パスワードを変更
             </button>
@@ -300,6 +300,36 @@ export default function MyPage() {
             <span>Google Calendar連携などの設定 →</span>
           </Link>
         </Card>
+
+        {(session?.user?.role === 'coach' || session?.user?.role === 'superadmin') && (
+          <Card>
+            <CardTitle>管理メニュー</CardTitle>
+            <div className="space-y-3">
+              <Link
+                href="/coach"
+                className="flex items-center gap-3 p-3 bg-[#f0e8eb] hover:bg-[#d46a7e]/10 rounded-xl transition"
+              >
+                <span className="text-xl">📝</span>
+                <div>
+                  <p className="font-medium text-[#4a3f42]">コーチページ</p>
+                  <p className="text-xs text-[#4a3f42]/60">メンバーへのフィードバック</p>
+                </div>
+              </Link>
+              {session?.user?.role === 'superadmin' && (
+                <Link
+                  href="/admin"
+                  className="flex items-center gap-3 p-3 bg-[#f0e8eb] hover:bg-[#d46a7e]/10 rounded-xl transition"
+                >
+                  <span className="text-xl">⚙️</span>
+                  <div>
+                    <p className="font-medium text-[#4a3f42]">管理者ページ</p>
+                    <p className="text-xs text-[#4a3f42]/60">ユーザー管理・統計</p>
+                  </div>
+                </Link>
+              )}
+            </div>
+          </Card>
+        )}
       </main>
     </div>
   )

@@ -85,6 +85,7 @@ export default function SharePage() {
   const [hasPosted, setHasPosted] = useState(false)
   const [isEditing, setIsEditing] = useState(false)
   const [windowStatus, setWindowStatus] = useState<WindowStatus>('before')
+  const [successMessage, setSuccessMessage] = useState('')
 
   const today = format(new Date(), 'yyyy年M月d日（E）', { locale: ja })
 
@@ -174,6 +175,8 @@ export default function SharePage() {
 
       setHasPosted(true)
       setIsEditing(false)
+      setSuccessMessage('保存しました')
+      setTimeout(() => setSuccessMessage(''), 3000)
       const refreshRes = await fetch('/api/share')
       if (refreshRes.ok) {
         const refreshData = await refreshRes.json()
@@ -220,6 +223,11 @@ export default function SharePage() {
           >
             {getWindowMessage()}
           </p>
+          {successMessage && (
+            <p className="text-sm mt-2 text-green-600 bg-green-50 px-4 py-2 rounded-lg inline-block">
+              {successMessage}
+            </p>
+          )}
         </div>
 
         {(!hasPosted || isEditing) && (
