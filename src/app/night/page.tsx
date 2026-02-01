@@ -46,6 +46,7 @@ export default function NightPage() {
   const [tomorrowMessage, setTomorrowMessage] = useState('')
   const [isShared, setIsShared] = useState(false)
   const [hasPosted, setHasPosted] = useState(false)
+  const [isEditing, setIsEditing] = useState(false)
   const [windowStatus, setWindowStatus] = useState<WindowStatus>('before')
 
   const today = format(new Date(), 'yyyy年M月d日（E）', { locale: ja })
@@ -134,6 +135,7 @@ export default function NightPage() {
 
       setMyJournal(data)
       setHasPosted(true)
+      setIsEditing(false)
 
       const refreshRes = await fetch('/api/night')
       if (refreshRes.ok) {
@@ -148,17 +150,22 @@ export default function NightPage() {
   }
 
   const getWindowMessage = () => {
+    if (hasPosted) {
+      return '編集はいつでも可能です'
+    }
     switch (windowStatus) {
       case 'before':
-        return 'まだ投稿時間ではありません（20:00〜23:59）'
+        return '新規投稿は 20:00〜23:59 の間のみ可能です'
       case 'open':
         return '投稿可能です'
       case 'after':
-        return '投稿ウィンドウは終了しました（閲覧のみ）'
+        return '新規投稿は 20:00〜23:59 の間のみ可能です'
     }
   }
 
+  // 新規投稿は時間制限あり、編集はいつでも可能
   const canPost = windowStatus === 'open'
+  const canEdit = hasPosted
 
   return (
     <div className="min-h-screen bg-[#f0e8eb]">
@@ -171,14 +178,14 @@ export default function NightPage() {
           <p className="text-sm text-[#4a3f42]/50 mt-1">夜の問い</p>
           <p
             className={`text-sm mt-2 ${
-              windowStatus === 'open' ? 'text-green-600' : 'text-[#d46a7e]'
+              windowStatus === 'open' || hasPosted ? 'text-green-600' : 'text-[#d46a7e]'
             }`}
           >
             {getWindowMessage()}
           </p>
         </div>
 
-        {!hasPosted && (
+        {(!hasPosted || isEditing) && (
           <Card>
             <CardTitle>あなたのNight Journal</CardTitle>
             <form onSubmit={handleSubmit} className="space-y-6">
@@ -191,7 +198,7 @@ export default function NightPage() {
                   value={proudChoice}
                   onChange={(e) => setProudChoice(e.target.value)}
                   placeholder="例: 難しい会話を避けずに向き合った"
-                  disabled={!canPost}
+                  disabled={!canPost && !isEditing}
                 />
               </div>
 
@@ -204,7 +211,7 @@ export default function NightPage() {
                   value={offChoice}
                   onChange={(e) => setOffChoice(e.target.value)}
                   placeholder="例: SNSを見すぎた。疲れて逃げたかった"
-                  disabled={!canPost}
+                  disabled={!canPost && !isEditing}
                 />
               </div>
 
@@ -217,7 +224,7 @@ export default function NightPage() {
                   value={moodReflection}
                   onChange={(e) => setMoodReflection(e.target.value)}
                   placeholder="例: 思ったより調子が良かった"
-                  disabled={!canPost}
+                  disabled={!canPost && !isEditing}
                 />
               </div>
 
@@ -230,7 +237,7 @@ export default function NightPage() {
                   value={learning}
                   onChange={(e) => setLearning(e.target.value)}
                   placeholder="例: 小さな一歩でも進めば気持ちが変わる"
-                  disabled={!canPost}
+                  disabled={!canPost && !isEditing}
                 />
               </div>
 
@@ -243,7 +250,7 @@ export default function NightPage() {
                   value={tomorrowMessage}
                   onChange={(e) => setTomorrowMessage(e.target.value)}
                   placeholder="例: 焦らなくていい。今日も一歩進んだ。"
-                  disabled={!canPost}
+                  disabled={!canPost && !isEditing}
                 />
               </div>
 
@@ -253,7 +260,7 @@ export default function NightPage() {
                   id="isShared"
                   checked={isShared}
                   onChange={(e) => setIsShared(e.target.checked)}
-                  disabled={!canPost}
+                  disabled={!canPost && !isEditing}
                   className="w-4 h-4 text-[#d46a7e] border-[#d46a7e]/30 rounded focus:ring-[#d46a7e]"
                 />
                 <label htmlFor="isShared" className="text-sm text-[#4a3f42]">
@@ -265,18 +272,29 @@ export default function NightPage() {
                 <div className="text-red-500 text-sm text-center">{error}</div>
               )}
 
-              <button
-                type="submit"
-                disabled={!canPost || submitting}
-                className="w-full"
-              >
-                {submitting ? '保存中...' : '保存する'}
-              </button>
+              <div className="flex gap-2">
+                <button
+                  type="submit"
+                  disabled={(!canPost && !isEditing) || submitting}
+                  className="flex-1"
+                >
+                  {submitting ? '保存中...' : isEditing ? '更新する' : '保存する'}
+                </button>
+                {isEditing && (
+                  <button
+                    type="button"
+                    onClick={() => setIsEditing(false)}
+                    className="px-4 py-2 bg-[#f0e8eb] hover:bg-[#d46a7e]/10 rounded-xl transition text-[#4a3f42]"
+                  >
+                    キャンセル
+                  </button>
+                )}
+              </div>
             </form>
           </Card>
         )}
 
-        {hasPosted && (
+        {hasPosted && !isEditing && (
           <Card className="border-2 border-[#d46a7e]/30">
             <CardTitle>あなたのNight Journal</CardTitle>
             <div className="space-y-4">
@@ -320,14 +338,12 @@ export default function NightPage() {
               </div>
             </div>
 
-            {canPost && (
-              <button
-                onClick={() => setHasPosted(false)}
-                className="mt-4 text-sm text-[#4a3f42]/60 hover:text-[#d46a7e] transition"
-              >
-                編集する
-              </button>
-            )}
+            <button
+              onClick={() => setIsEditing(true)}
+              className="mt-4 text-sm text-[#4a3f42]/60 hover:text-[#d46a7e] transition"
+            >
+              編集する
+            </button>
           </Card>
         )}
 

@@ -68,19 +68,26 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: '認証が必要です' }, { status: 401 })
     }
 
-    if (!isShareWindowOpen()) {
-      return NextResponse.json(
-        { error: '投稿は 7:00〜8:00 の間のみ可能です' },
-        { status: 403 }
-      )
-    }
-
     const body = await req.json()
     const { mood, value, action, letGo, declaration } = shareSchema.parse(body)
 
     await connectDB()
 
     const dateKey = getDateKey()
+
+    // 既存の投稿があるか確認（編集の場合は時間制限なし）
+    const existingShare = await DailyShare.findOne({
+      userId: session.user.id,
+      dateKey,
+    })
+
+    // 新規投稿の場合のみ時間制限をチェック
+    if (!existingShare && !isShareWindowOpen()) {
+      return NextResponse.json(
+        { error: '新規投稿は 7:00〜8:00 の間のみ可能です' },
+        { status: 403 }
+      )
+    }
 
     const share = await DailyShare.findOneAndUpdate(
       { userId: session.user.id, dateKey },

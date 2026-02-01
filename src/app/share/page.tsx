@@ -42,6 +42,7 @@ export default function SharePage() {
   const [letGo, setLetGo] = useState('')
   const [declaration, setDeclaration] = useState('')
   const [hasPosted, setHasPosted] = useState(false)
+  const [isEditing, setIsEditing] = useState(false)
   const [windowStatus, setWindowStatus] = useState<WindowStatus>('before')
 
   const today = format(new Date(), 'yyyy年M月d日（E）', { locale: ja })
@@ -131,6 +132,7 @@ export default function SharePage() {
       }
 
       setHasPosted(true)
+      setIsEditing(false)
       const refreshRes = await fetch('/api/share')
       if (refreshRes.ok) {
         const refreshData = await refreshRes.json()
@@ -144,17 +146,22 @@ export default function SharePage() {
   }
 
   const getWindowMessage = () => {
+    if (hasPosted) {
+      return '編集はいつでも可能です'
+    }
     switch (windowStatus) {
       case 'before':
-        return 'まだ投稿時間ではありません（7:00〜8:00）'
+        return '新規投稿は 7:00〜8:00 の間のみ可能です'
       case 'open':
         return '投稿可能です'
       case 'after':
-        return '投稿ウィンドウは終了しました（閲覧のみ）'
+        return '新規投稿は 7:00〜8:00 の間のみ可能です'
     }
   }
 
+  // 新規投稿は時間制限あり、編集はいつでも可能
   const canPost = windowStatus === 'open'
+  const canEdit = hasPosted
 
   return (
     <div className="min-h-screen bg-[#f0e8eb]">
@@ -167,14 +174,14 @@ export default function SharePage() {
           <p className="text-sm text-[#4a3f42]/50 mt-1">朝の問い</p>
           <p
             className={`text-sm mt-2 ${
-              windowStatus === 'open' ? 'text-green-600' : 'text-[#d46a7e]'
+              windowStatus === 'open' || hasPosted ? 'text-green-600' : 'text-[#d46a7e]'
             }`}
           >
             {getWindowMessage()}
           </p>
         </div>
 
-        {!hasPosted && (
+        {(!hasPosted || isEditing) && (
           <Card>
             <CardTitle>あなたのMorning Journal</CardTitle>
             <form onSubmit={handleSubmit} className="space-y-6">
@@ -185,7 +192,7 @@ export default function SharePage() {
                 <MoodPicker
                   selected={selectedMood}
                   onChange={setSelectedMood}
-                  disabled={!canPost}
+                  disabled={!canPost && !isEditing}
                 />
               </div>
 
@@ -198,7 +205,7 @@ export default function SharePage() {
                   value={value}
                   onChange={(e) => setValue(e.target.value)}
                   placeholder="例: 丁寧さ、スピード、誠実さ"
-                  disabled={!canPost}
+                  disabled={!canPost && !isEditing}
                 />
               </div>
 
@@ -211,7 +218,7 @@ export default function SharePage() {
                   value={action}
                   onChange={(e) => setAction(e.target.value)}
                   placeholder="例: 企画書のドラフトを完成させる"
-                  disabled={!canPost}
+                  disabled={!canPost && !isEditing}
                 />
               </div>
 
@@ -227,7 +234,7 @@ export default function SharePage() {
                   value={letGo}
                   onChange={(e) => setLetGo(e.target.value)}
                   placeholder="例: 他人との比較"
-                  disabled={!canPost}
+                  disabled={!canPost && !isEditing}
                 />
               </div>
 
@@ -243,7 +250,7 @@ export default function SharePage() {
                   value={declaration}
                   onChange={(e) => setDeclaration(e.target.value)}
                   placeholder="今日の自分は、集中して成果を出す。"
-                  disabled={!canPost}
+                  disabled={!canPost && !isEditing}
                   required
                 />
               </div>
@@ -252,18 +259,29 @@ export default function SharePage() {
                 <div className="text-red-500 text-sm text-center">{error}</div>
               )}
 
-              <button
-                type="submit"
-                disabled={!canPost || submitting || !selectedMood}
-                className="w-full"
-              >
-                {submitting ? '投稿中...' : '宣言する'}
-              </button>
+              <div className="flex gap-2">
+                <button
+                  type="submit"
+                  disabled={(!canPost && !isEditing) || submitting || !selectedMood}
+                  className="flex-1"
+                >
+                  {submitting ? '保存中...' : isEditing ? '更新する' : '宣言する'}
+                </button>
+                {isEditing && (
+                  <button
+                    type="button"
+                    onClick={() => setIsEditing(false)}
+                    className="px-4 py-2 bg-[#f0e8eb] hover:bg-[#d46a7e]/10 rounded-xl transition text-[#4a3f42]"
+                  >
+                    キャンセル
+                  </button>
+                )}
+              </div>
             </form>
           </Card>
         )}
 
-        {hasPosted && (
+        {hasPosted && !isEditing && (
           <Card className="border-2 border-[#d46a7e]/30">
             <CardTitle>あなたのMorning Journal</CardTitle>
             <div className="space-y-4">
@@ -299,14 +317,12 @@ export default function SharePage() {
               </div>
             </div>
 
-            {canPost && (
-              <button
-                onClick={() => setHasPosted(false)}
-                className="mt-4 text-sm text-[#4a3f42]/60 hover:text-[#d46a7e] transition"
-              >
-                編集する
-              </button>
-            )}
+            <button
+              onClick={() => setIsEditing(true)}
+              className="mt-4 text-sm text-[#4a3f42]/60 hover:text-[#d46a7e] transition"
+            >
+              編集する
+            </button>
           </Card>
         )}
 

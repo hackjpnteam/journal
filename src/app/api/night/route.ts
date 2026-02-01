@@ -78,19 +78,26 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: '認証が必要です' }, { status: 401 })
     }
 
-    if (!isNightWindowOpen()) {
-      return NextResponse.json(
-        { error: '投稿は 20:00〜23:59 の間のみ可能です' },
-        { status: 403 }
-      )
-    }
-
     const body = await req.json()
     const data = nightJournalSchema.parse(body)
 
     await connectDB()
 
     const dateKey = getDateKey()
+
+    // 既存の投稿があるか確認（編集の場合は時間制限なし）
+    const existingJournal = await NightJournal.findOne({
+      userId: session.user.id,
+      dateKey,
+    })
+
+    // 新規投稿の場合のみ時間制限をチェック
+    if (!existingJournal && !isNightWindowOpen()) {
+      return NextResponse.json(
+        { error: '新規投稿は 20:00〜23:59 の間のみ可能です' },
+        { status: 403 }
+      )
+    }
 
     const journal = await NightJournal.findOneAndUpdate(
       { userId: session.user.id, dateKey },
