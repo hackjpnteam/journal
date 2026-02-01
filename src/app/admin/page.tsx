@@ -24,6 +24,26 @@ interface UserStats {
   }
 }
 
+interface DailyStat {
+  date: string
+  morning: number
+  night: number
+  total: number
+}
+
+interface Summary {
+  totalUsers: number
+  todayMorning: number
+  todayNight: number
+  totalMorningPosts: number
+  totalNightPosts: number
+  healthDistribution: {
+    good: number
+    warning: number
+    risk: number
+  }
+}
+
 function getHealthColor(score: number): string {
   if (score >= 70) return 'text-green-600 bg-green-100'
   if (score >= 40) return 'text-yellow-600 bg-yellow-100'
@@ -38,6 +58,8 @@ function getHealthLabel(score: number): string {
 
 export default function AdminPage() {
   const [users, setUsers] = useState<UserStats[]>([])
+  const [summary, setSummary] = useState<Summary | null>(null)
+  const [dailyStats, setDailyStats] = useState<DailyStat[]>([])
   const [loading, setLoading] = useState(true)
   const [sortBy, setSortBy] = useState<'healthScore' | 'lastActivity' | 'createdAt'>('healthScore')
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc')
@@ -49,6 +71,8 @@ export default function AdminPage() {
         if (res.ok) {
           const data = await res.json()
           setUsers(data.users)
+          setSummary(data.summary)
+          setDailyStats(data.dailyStats || [])
         }
       } catch (error) {
         console.error('Failed to fetch users:', error)
@@ -67,7 +91,6 @@ export default function AdminPage() {
         comparison = a.stats.healthScore - b.stats.healthScore
         break
       case 'lastActivity':
-        // nullは最後に表示
         if (!a.stats.lastActivity && !b.stats.lastActivity) comparison = 0
         else if (!a.stats.lastActivity) comparison = -1
         else if (!b.stats.lastActivity) comparison = 1
@@ -80,9 +103,7 @@ export default function AdminPage() {
     return sortOrder === 'asc' ? comparison : -comparison
   })
 
-  const totalUsers = users.length
-  const activeUsers = users.filter((u) => u.stats.healthScore >= 40).length
-  const atRiskUsers = users.filter((u) => u.stats.healthScore < 40).length
+  const maxDailyTotal = Math.max(...dailyStats.map(d => d.total), 1)
 
   return (
     <div className="min-h-screen bg-[#f0e8eb]">
@@ -91,30 +112,99 @@ export default function AdminPage() {
       <main className="max-w-6xl mx-auto p-4 space-y-6">
         <div className="text-center py-4">
           <p className="text-[#d46a7e] text-sm font-medium">Super Admin</p>
-          <h1 className="text-xl font-semibold mt-1 text-[#4a3f42]">ユーザー管理</h1>
+          <h1 className="text-xl font-semibold mt-1 text-[#4a3f42]">ダッシュボード</h1>
         </div>
 
-        {/* サマリー */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        {/* サマリーカード */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <Card>
             <div className="text-center">
-              <p className="text-3xl font-bold text-[#4a3f42]">{totalUsers}</p>
-              <p className="text-sm text-[#4a3f42]/60">総ユーザー数</p>
+              <p className="text-xs text-[#4a3f42]/60 mb-1">総ユーザー</p>
+              <p className="text-3xl font-bold text-[#4a3f42]">{summary?.totalUsers || 0}</p>
             </div>
           </Card>
           <Card>
             <div className="text-center">
-              <p className="text-3xl font-bold text-green-600">{activeUsers}</p>
-              <p className="text-sm text-[#4a3f42]/60">アクティブユーザー</p>
+              <p className="text-xs text-[#4a3f42]/60 mb-1">今日の朝投稿</p>
+              <p className="text-3xl font-bold text-[#d46a7e]">{summary?.todayMorning || 0}</p>
             </div>
           </Card>
           <Card>
             <div className="text-center">
-              <p className="text-3xl font-bold text-red-600">{atRiskUsers}</p>
-              <p className="text-sm text-[#4a3f42]/60">要フォローアップ</p>
+              <p className="text-xs text-[#4a3f42]/60 mb-1">今日の夜投稿</p>
+              <p className="text-3xl font-bold text-[#4a3f42]">{summary?.todayNight || 0}</p>
+            </div>
+          </Card>
+          <Card>
+            <div className="text-center">
+              <p className="text-xs text-[#4a3f42]/60 mb-1">累計投稿数</p>
+              <p className="text-3xl font-bold text-[#4a3f42]">
+                {(summary?.totalMorningPosts || 0) + (summary?.totalNightPosts || 0)}
+              </p>
             </div>
           </Card>
         </div>
+
+        {/* 日別推移グラフ */}
+        <Card>
+          <CardTitle>日別推移（過去7日間）</CardTitle>
+          <div className="mt-4">
+            <div className="flex items-end justify-between gap-2 h-48">
+              {dailyStats.map((stat) => (
+                <div key={stat.date} className="flex-1 flex flex-col items-center">
+                  <span className="text-xs text-[#4a3f42] mb-1">{stat.total}</span>
+                  <div className="w-full flex flex-col gap-1" style={{ height: '160px' }}>
+                    <div
+                      className="w-full bg-[#d46a7e] rounded-t transition-all"
+                      style={{ height: `${(stat.morning / maxDailyTotal) * 100}%` }}
+                      title={`朝: ${stat.morning}`}
+                    />
+                    <div
+                      className="w-full bg-[#4a3f42] rounded-b transition-all"
+                      style={{ height: `${(stat.night / maxDailyTotal) * 100}%` }}
+                      title={`夜: ${stat.night}`}
+                    />
+                  </div>
+                  <span className="text-xs text-[#4a3f42]/60 mt-2">
+                    {format(new Date(stat.date), 'MM/dd')}
+                  </span>
+                </div>
+              ))}
+            </div>
+            <div className="flex justify-center gap-6 mt-4">
+              <div className="flex items-center gap-2">
+                <div className="w-3 h-3 rounded bg-[#d46a7e]" />
+                <span className="text-xs text-[#4a3f42]/60">朝</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-3 h-3 rounded bg-[#4a3f42]" />
+                <span className="text-xs text-[#4a3f42]/60">夜</span>
+              </div>
+            </div>
+          </div>
+        </Card>
+
+        {/* ヘルス分布 */}
+        <Card>
+          <CardTitle>ユーザーヘルス分布</CardTitle>
+          <div className="grid grid-cols-3 gap-4 mt-4">
+            <div className="bg-green-50 rounded-xl p-4 text-center">
+              <div className="text-3xl mb-1">😊</div>
+              <p className="text-2xl font-bold text-green-600">{summary?.healthDistribution.good || 0}</p>
+              <p className="text-xs text-green-600/70">良好（70点以上）</p>
+            </div>
+            <div className="bg-yellow-50 rounded-xl p-4 text-center">
+              <div className="text-3xl mb-1">😐</div>
+              <p className="text-2xl font-bold text-yellow-600">{summary?.healthDistribution.warning || 0}</p>
+              <p className="text-xs text-yellow-600/70">注意（40-69点）</p>
+            </div>
+            <div className="bg-red-50 rounded-xl p-4 text-center">
+              <div className="text-3xl mb-1">😟</div>
+              <p className="text-2xl font-bold text-red-600">{summary?.healthDistribution.risk || 0}</p>
+              <p className="text-xs text-red-600/70">要フォロー（40点未満）</p>
+            </div>
+          </div>
+        </Card>
 
         {/* ソート */}
         <div className="flex flex-wrap gap-2 items-center">
@@ -187,7 +277,6 @@ export default function AdminPage() {
                   className="bg-[#f0e8eb] rounded-xl p-4"
                 >
                   <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                    {/* ユーザー情報 */}
                     <div className="flex-1">
                       <div className="flex items-center gap-2 flex-wrap">
                         <span className="font-medium text-[#4a3f42]">{user.name}</span>
@@ -208,7 +297,6 @@ export default function AdminPage() {
                       </div>
                     </div>
 
-                    {/* ヘルススコア */}
                     <div className="flex items-center gap-4">
                       <div
                         className={`px-3 py-1 rounded-full text-sm font-medium ${getHealthColor(
@@ -220,7 +308,6 @@ export default function AdminPage() {
                     </div>
                   </div>
 
-                  {/* 統計 */}
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-4 text-sm">
                     <div className="bg-white rounded-lg p-2 text-center">
                       <p className="text-[#4a3f42]/50 text-xs">7日間（朝/夜）</p>

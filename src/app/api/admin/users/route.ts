@@ -115,7 +115,48 @@ export async function GET() {
       })
     )
 
-    return NextResponse.json({ users: userStats })
+    // 日別投稿数（過去7日間）
+    const dailyStats = await Promise.all(
+      last7Days.map(async (dateKey) => {
+        const morningCount = await DailyShare.countDocuments({ dateKey })
+        const nightCount = await NightJournal.countDocuments({ dateKey })
+        return {
+          date: dateKey,
+          morning: morningCount,
+          night: nightCount,
+          total: morningCount + nightCount,
+        }
+      })
+    )
+
+    // 今日の統計
+    const todayKey = last7Days[0]
+    const todayMorning = await DailyShare.countDocuments({ dateKey: todayKey })
+    const todayNight = await NightJournal.countDocuments({ dateKey: todayKey })
+
+    // 総投稿数
+    const totalMorningPosts = await DailyShare.countDocuments({})
+    const totalNightPosts = await NightJournal.countDocuments({})
+
+    // ヘルススコア分布
+    const healthDistribution = {
+      good: userStats.filter(u => u.stats.healthScore >= 70).length,
+      warning: userStats.filter(u => u.stats.healthScore >= 40 && u.stats.healthScore < 70).length,
+      risk: userStats.filter(u => u.stats.healthScore < 40).length,
+    }
+
+    return NextResponse.json({
+      users: userStats,
+      summary: {
+        totalUsers: users.length,
+        todayMorning,
+        todayNight,
+        totalMorningPosts,
+        totalNightPosts,
+        healthDistribution,
+      },
+      dailyStats: dailyStats.reverse(), // 古い順に並べる
+    })
   } catch (error) {
     console.error('Get admin users error:', error)
     return NextResponse.json({ error: '取得に失敗しました' }, { status: 500 })
