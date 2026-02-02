@@ -56,13 +56,14 @@ interface OKRData {
 }
 
 export default function HomePage() {
-  const { data: session } = useSession()
+  const { data: session, status } = useSession()
   const [timeline, setTimeline] = useState<TimelineItem[]>([])
   const [coachingNote, setCoachingNote] = useState<CoachingNote | null>(null)
   const [weeklyOKR, setWeeklyOKR] = useState<OKRData | null>(null)
   const [loading, setLoading] = useState(true)
   const [deleting, setDeleting] = useState<string | null>(null)
   const [cheeringPost, setCheeringPost] = useState<string | null>(null)
+  const [userName, setUserName] = useState<string>('')
 
   const today = format(new Date(), 'yyyy年M月d日（E）', { locale: ja })
   const currentHour = new Date().getHours()
@@ -97,9 +98,16 @@ export default function HomePage() {
         const okrRes = await fetch(`/api/okr?type=weekly&periodKey=${weeklyPeriodKey}`)
         if (okrRes.ok) {
           const okrData = await okrRes.json()
-          if (okrData) {
+          if (okrData && okrData.objective) {
             setWeeklyOKR(okrData)
           }
+        }
+
+        // ユーザー名を最新の状態で取得
+        const profileRes = await fetch('/api/profile')
+        if (profileRes.ok) {
+          const profileData = await profileRes.json()
+          setUserName(profileData.name || '')
         }
       } catch (error) {
         console.error('Failed to fetch data:', error)
@@ -108,10 +116,10 @@ export default function HomePage() {
       }
     }
 
-    if (session?.user) {
+    if (status === 'authenticated' && session?.user) {
       fetchData()
     }
-  }, [session])
+  }, [session, status])
 
   const handleDeletePost = async (postId: string, postType: string) => {
     if (!confirm('この投稿を削除しますか？')) return
@@ -191,7 +199,7 @@ export default function HomePage() {
         <div className="text-center py-4">
           <p className="text-[#4a3f42]/60 text-sm">{today}</p>
           <h1 className="text-xl font-semibold mt-1 text-[#4a3f42]">
-            {getGreeting()}、{session?.user?.name}さん
+            {getGreeting()}、{userName || session?.user?.name}さん
           </h1>
         </div>
 

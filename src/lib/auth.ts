@@ -57,17 +57,25 @@ export const authOptions: NextAuthOptions = {
     async jwt({ token, user, trigger, session }) {
       if (user) {
         token.id = user.id
+        token.name = user.name
         token.role = user.role
         token.onboardingCompleted = user.onboardingCompleted
       }
+      // セッション更新時（プロフィール変更など）
       if (trigger === 'update' && session) {
-        token.onboardingCompleted = session.onboardingCompleted
+        if (session.onboardingCompleted !== undefined) {
+          token.onboardingCompleted = session.onboardingCompleted
+        }
+        if (session.name) {
+          token.name = session.name
+        }
       }
       return token
     },
     async session({ session, token }) {
       if (session.user) {
         session.user.id = token.id as string
+        session.user.name = token.name as string
         session.user.role = token.role as 'member' | 'coach' | 'superadmin'
         session.user.onboardingCompleted = token.onboardingCompleted as boolean
       }
