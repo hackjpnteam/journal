@@ -72,6 +72,10 @@ export default function AdminPage() {
   const [loading, setLoading] = useState(true)
   const [sortBy, setSortBy] = useState<'healthScore' | 'lastActivity' | 'createdAt'>('healthScore')
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc')
+  const [resetPasswordUserId, setResetPasswordUserId] = useState<string | null>(null)
+  const [newPassword, setNewPassword] = useState('')
+  const [resetMessage, setResetMessage] = useState('')
+  const [resetting, setResetting] = useState(false)
 
   useEffect(() => {
     const fetchData = async () => {
@@ -92,6 +96,41 @@ export default function AdminPage() {
 
     fetchData()
   }, [])
+
+  const handleResetPassword = async () => {
+    if (!resetPasswordUserId || !newPassword) return
+    if (newPassword.length < 6) {
+      setResetMessage('パスワードは6文字以上にしてください')
+      return
+    }
+
+    setResetting(true)
+    setResetMessage('')
+
+    try {
+      const res = await fetch('/api/admin/reset-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: resetPasswordUserId, newPassword }),
+      })
+
+      const data = await res.json()
+      if (res.ok) {
+        setResetMessage('パスワードをリセットしました')
+        setNewPassword('')
+        setTimeout(() => {
+          setResetPasswordUserId(null)
+          setResetMessage('')
+        }, 2000)
+      } else {
+        setResetMessage(data.error || 'リセットに失敗しました')
+      }
+    } catch {
+      setResetMessage('エラーが発生しました')
+    } finally {
+      setResetting(false)
+    }
+  }
 
   const sortedUsers = [...users].sort((a, b) => {
     let comparison = 0
@@ -384,7 +423,13 @@ export default function AdminPage() {
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => setResetPasswordUserId(user.id)}
+                        className="px-2 py-1 text-xs bg-white hover:bg-red-50 text-red-500 rounded-lg transition"
+                      >
+                        🔑 PW
+                      </button>
                       <div
                         className={`px-3 py-1 rounded-full text-sm font-medium ${getHealthColor(
                           user.stats.healthScore
@@ -427,6 +472,54 @@ export default function AdminPage() {
           )}
         </Card>
       </main>
+
+      {/* パスワードリセットモーダル */}
+      {resetPasswordUserId && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl p-6 w-full max-w-md">
+            <h3 className="text-lg font-semibold text-[#4a3f42] mb-4">パスワードリセット</h3>
+            <p className="text-sm text-[#4a3f42]/60 mb-4">
+              {users.find(u => u.id === resetPasswordUserId)?.name}（{users.find(u => u.id === resetPasswordUserId)?.email}）
+            </p>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm text-[#4a3f42]/70 mb-1">新しいパスワード</label>
+                <input
+                  type="text"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  placeholder="6文字以上"
+                  className="w-full px-4 py-2 border rounded-xl"
+                />
+              </div>
+              {resetMessage && (
+                <p className={`text-sm ${resetMessage.includes('リセットしました') ? 'text-green-600' : 'text-red-500'}`}>
+                  {resetMessage}
+                </p>
+              )}
+              <div className="flex gap-2">
+                <button
+                  onClick={handleResetPassword}
+                  disabled={resetting || !newPassword}
+                  className="flex-1 py-2 bg-[#d46a7e] hover:bg-[#c25a6e] text-white rounded-xl transition disabled:opacity-50"
+                >
+                  {resetting ? 'リセット中...' : 'リセット'}
+                </button>
+                <button
+                  onClick={() => {
+                    setResetPasswordUserId(null)
+                    setNewPassword('')
+                    setResetMessage('')
+                  }}
+                  className="px-4 py-2 bg-[#f0e8eb] hover:bg-[#d46a7e]/10 text-[#4a3f42] rounded-xl transition"
+                >
+                  キャンセル
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
