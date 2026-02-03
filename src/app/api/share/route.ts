@@ -85,7 +85,7 @@ export async function POST(req: NextRequest) {
     // 新規投稿の場合のみ時間制限をチェック
     if (!existingShare && !isShareWindowOpen()) {
       return NextResponse.json(
-        { error: '新規投稿は 7:00〜8:00 の間のみ可能です' },
+        { error: '新規投稿は 6:00〜9:00 の間のみ可能です' },
         { status: 403 }
       )
     }

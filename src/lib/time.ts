@@ -32,8 +32,8 @@ export function getShareWindowStatus(): ShareWindowStatus {
   const minutes = now.getMinutes()
   const totalMinutes = hours * 60 + minutes
 
-  const openTime = 7 * 60 // 7:00 = 420分
-  const closeTime = 8 * 60 // 8:00 = 480分
+  const openTime = 6 * 60 // 6:00 = 360分
+  const closeTime = 9 * 60 // 9:00 = 540分
 
   if (totalMinutes < openTime) {
     return 'before'
@@ -52,7 +52,7 @@ export function getShareWindowMessage(): string {
   const status = getShareWindowStatus()
   switch (status) {
     case 'before':
-      return 'まだ投稿時間ではありません（7:00〜8:00）'
+      return 'まだ投稿時間ではありません（6:00〜9:00）'
     case 'open':
       return '投稿可能です'
     case 'after':
@@ -68,7 +68,7 @@ export function getNightWindowStatus(): NightWindowStatus {
   const minutes = now.getMinutes()
   const totalMinutes = hours * 60 + minutes
 
-  const openTime = 20 * 60 // 20:00 = 1200分
+  const openTime = 18 * 60 // 18:00 = 1080分
   const closeTime = 23 * 60 + 59 // 23:59 = 1439分
 
   if (totalMinutes < openTime) {

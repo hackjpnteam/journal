@@ -25,8 +25,32 @@ export async function GET(req: NextRequest) {
 
     const { searchParams } = new URL(req.url)
     const dateKey = searchParams.get('dateKey') || getDateKey()
+    const weeklyAvg = searchParams.get('weeklyAvg') === 'true'
 
     await connectDB()
+
+    // 今週の平均スコアを取得
+    let weeklyAverageScore: number | null = null
+    if (weeklyAvg) {
+      // 今週の開始日（月曜日）を計算
+      const now = new Date()
+      const dayOfWeek = now.getDay()
+      const mondayOffset = dayOfWeek === 0 ? -6 : 1 - dayOfWeek
+      const monday = new Date(now)
+      monday.setDate(now.getDate() + mondayOffset)
+      monday.setHours(0, 0, 0, 0)
+
+      const weeklyJournals = await NightJournal.find({
+        userId: session.user.id,
+        createdAt: { $gte: monday },
+        selfScore: { $exists: true, $ne: null },
+      }).select('selfScore')
+
+      if (weeklyJournals.length > 0) {
+        const totalScore = weeklyJournals.reduce((sum, j) => sum + (j.selfScore || 0), 0)
+        weeklyAverageScore = totalScore / weeklyJournals.length
+      }
+    }
 
     // 自分のNight Journalを取得
     const myJournal = await NightJournal.findOne({
@@ -68,6 +92,7 @@ export async function GET(req: NextRequest) {
         selfScore: j.selfScore,
         createdAt: j.createdAt,
       })),
+      weeklyAverageScore,
     })
   } catch (error) {
     console.error('Get night journal error:', error)
@@ -98,7 +123,7 @@ export async function POST(req: NextRequest) {
     // 新規投稿の場合のみ時間制限をチェック
     if (!existingJournal && !isNightWindowOpen()) {
       return NextResponse.json(
-        { error: '新規投稿は 20:00〜23:59 の間のみ可能です' },
+        { error: '新規投稿は 18:00〜23:59 の間のみ可能です' },
         { status: 403 }
       )
     }

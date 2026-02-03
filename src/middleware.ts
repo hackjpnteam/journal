@@ -6,9 +6,9 @@ export default withAuth(
     const { pathname } = req.nextUrl
     const token = req.nextauth.token
 
-    // 未ログインは /login へ
+    // 未ログインは /lp へ
     if (!token) {
-      return NextResponse.redirect(new URL('/login', req.url))
+      return NextResponse.redirect(new URL('/lp', req.url))
     }
 
     // onboarding未完了の場合は /onboarding へリダイレクト
@@ -36,6 +36,9 @@ export default withAuth(
   {
     callbacks: {
       authorized: ({ token }) => !!token,
+    },
+    pages: {
+      signIn: '/lp',
     },
   }
 )

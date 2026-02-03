@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { TopBar } from '@/components/TopBar'
 import { Card, CardTitle } from '@/components/Card'
+import { useTimeTheme, themeColors } from '@/hooks/useTimeTheme'
 import { format, addWeeks, subWeeks, addMonths, subMonths, startOfWeek, getISOWeek, getYear } from 'date-fns'
 import { ja } from 'date-fns/locale'
 
@@ -11,12 +12,17 @@ type OKRType = 'weekly' | 'monthly'
 interface OKRData {
   objective: string
   keyResults: string[]
+  keyResultsProgress?: number[]
   focus?: string
   identityFocus?: string
   isShared?: boolean
 }
 
 export default function OKRPage() {
+  const timeTheme = useTimeTheme()
+  const theme = themeColors[timeTheme]
+  const isNight = timeTheme === 'night'
+
   const [viewType, setViewType] = useState<OKRType>('weekly')
   const [currentDate, setCurrentDate] = useState(new Date())
   const [loading, setLoading] = useState(true)
@@ -28,6 +34,9 @@ export default function OKRPage() {
   const [kr1, setKr1] = useState('')
   const [kr2, setKr2] = useState('')
   const [kr3, setKr3] = useState('')
+  const [progress1, setProgress1] = useState(0)
+  const [progress2, setProgress2] = useState(0)
+  const [progress3, setProgress3] = useState(0)
   const [focus, setFocus] = useState('')
   const [identityFocus, setIdentityFocus] = useState('')
   const [isShared, setIsShared] = useState(false)
@@ -83,6 +92,9 @@ export default function OKRPage() {
             setKr1(data.keyResults?.[0] || '')
             setKr2(data.keyResults?.[1] || '')
             setKr3(data.keyResults?.[2] || '')
+            setProgress1(data.keyResultsProgress?.[0] || 0)
+            setProgress2(data.keyResultsProgress?.[1] || 0)
+            setProgress3(data.keyResultsProgress?.[2] || 0)
             setFocus(data.focus || '')
             setIdentityFocus(data.identityFocus || '')
             setIsShared(data.isShared || false)
@@ -91,6 +103,9 @@ export default function OKRPage() {
             setKr1('')
             setKr2('')
             setKr3('')
+            setProgress1(0)
+            setProgress2(0)
+            setProgress3(0)
             setFocus('')
             setIdentityFocus('')
             setIsShared(false)
@@ -124,6 +139,7 @@ export default function OKRPage() {
           periodKey: getPeriodKey(),
           objective,
           keyResults: [kr1, kr2, kr3],
+          keyResultsProgress: [progress1, progress2, progress3],
           focus: viewType === 'weekly' ? focus : undefined,
           identityFocus: viewType === 'monthly' ? identityFocus : undefined,
           isShared,
@@ -145,22 +161,22 @@ export default function OKRPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#f0e8eb]">
-      <TopBar />
+    <div className={`min-h-screen transition-colors duration-500 ${theme.bg}`}>
+      <TopBar isNight={isNight} />
 
       <main className="max-w-2xl mx-auto p-4 space-y-6">
         <div className="text-center py-4">
-          <h1 className="text-xl font-semibold text-[#4a3f42]">OKR</h1>
+          <h1 className={`text-xl font-semibold ${theme.text}`}>OKR</h1>
         </div>
 
         <div className="flex justify-center">
-          <div className="inline-flex bg-white rounded-lg p-1 shadow-sm">
+          <div className={`inline-flex rounded-lg p-1 shadow-sm ${isNight ? 'bg-[#2d2438]' : 'bg-white'}`}>
             <button
               onClick={() => setViewType('weekly')}
               className={`px-4 py-2 rounded-lg text-sm transition ${
                 viewType === 'weekly'
-                  ? 'bg-[#d46a7e] text-white'
-                  : 'text-[#4a3f42]/60 hover:text-[#4a3f42]'
+                  ? isNight ? 'bg-[#9b7bb8] text-white' : 'bg-[#d46a7e] text-white'
+                  : isNight ? 'text-white/60 hover:text-white' : 'text-[#4a3f42]/60 hover:text-[#4a3f42]'
               }`}
             >
               週間
@@ -169,8 +185,8 @@ export default function OKRPage() {
               onClick={() => setViewType('monthly')}
               className={`px-4 py-2 rounded-lg text-sm transition ${
                 viewType === 'monthly'
-                  ? 'bg-[#d46a7e] text-white'
-                  : 'text-[#4a3f42]/60 hover:text-[#4a3f42]'
+                  ? isNight ? 'bg-[#9b7bb8] text-white' : 'bg-[#d46a7e] text-white'
+                  : isNight ? 'text-white/60 hover:text-white' : 'text-[#4a3f42]/60 hover:text-[#4a3f42]'
               }`}
             >
               月間
@@ -181,32 +197,40 @@ export default function OKRPage() {
         <div className="flex items-center justify-center gap-4">
           <button
             onClick={goToPrev}
-            className="p-2 hover:bg-[#d46a7e]/10 rounded-lg transition text-[#d46a7e]"
+            className={`p-2 rounded-lg transition ${
+              isNight
+                ? 'hover:bg-[#9b7bb8]/10 text-[#c9a0dc]'
+                : 'hover:bg-[#d46a7e]/10 text-[#d46a7e]'
+            }`}
           >
             ←
           </button>
-          <span className="text-lg font-medium text-[#4a3f42]">{getPeriodLabel()}</span>
+          <span className={`text-lg font-medium ${theme.text}`}>{getPeriodLabel()}</span>
           <button
             onClick={goToNext}
-            className="p-2 hover:bg-[#d46a7e]/10 rounded-lg transition text-[#d46a7e]"
+            className={`p-2 rounded-lg transition ${
+              isNight
+                ? 'hover:bg-[#9b7bb8]/10 text-[#c9a0dc]'
+                : 'hover:bg-[#d46a7e]/10 text-[#d46a7e]'
+            }`}
           >
             →
           </button>
         </div>
 
         {loading ? (
-          <Card>
-            <div className="text-center text-[#4a3f42]/50">読み込み中...</div>
+          <Card isNight={isNight}>
+            <div className={`text-center ${theme.textFaint}`}>読み込み中...</div>
           </Card>
         ) : (
-          <Card>
-            <CardTitle>
+          <Card isNight={isNight}>
+            <CardTitle isNight={isNight}>
               {viewType === 'weekly' ? '今週の目標' : '今月の目標'}
             </CardTitle>
 
             <div className="space-y-4">
               <div>
-                <label className="block text-sm text-[#4a3f42]/70 mb-1">目標</label>
+                <label className={`block text-sm mb-1 ${theme.textMuted}`}>目標</label>
                 <input
                   type="text"
                   value={objective}
@@ -216,34 +240,85 @@ export default function OKRPage() {
               </div>
 
               <div>
-                <label className="block text-sm text-[#4a3f42]/70 mb-1">
+                <label className={`block text-sm mb-1 ${theme.textMuted}`}>
                   Key Results（最大3つ）
                 </label>
-                <div className="space-y-2">
-                  <input
-                    type="text"
-                    value={kr1}
-                    onChange={(e) => setKr1(e.target.value)}
-                    placeholder="KR 1"
-                  />
-                  <input
-                    type="text"
-                    value={kr2}
-                    onChange={(e) => setKr2(e.target.value)}
-                    placeholder="KR 2"
-                  />
-                  <input
-                    type="text"
-                    value={kr3}
-                    onChange={(e) => setKr3(e.target.value)}
-                    placeholder="KR 3"
-                  />
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <input
+                      type="text"
+                      value={kr1}
+                      onChange={(e) => setKr1(e.target.value)}
+                      placeholder="KR 1"
+                    />
+                    {kr1 && (
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="range"
+                          min="0"
+                          max="100"
+                          value={progress1}
+                          onChange={(e) => setProgress1(Number(e.target.value))}
+                          className={`flex-1 h-2 rounded-lg appearance-none cursor-pointer ${
+                            isNight ? 'bg-[#1a1625] accent-[#9b7bb8]' : 'bg-[#f0e8eb] accent-[#d46a7e]'
+                          }`}
+                        />
+                        <span className={`text-sm font-medium w-12 text-right ${theme.accentText}`}>{progress1}%</span>
+                      </div>
+                    )}
+                  </div>
+                  <div className="space-y-2">
+                    <input
+                      type="text"
+                      value={kr2}
+                      onChange={(e) => setKr2(e.target.value)}
+                      placeholder="KR 2"
+                    />
+                    {kr2 && (
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="range"
+                          min="0"
+                          max="100"
+                          value={progress2}
+                          onChange={(e) => setProgress2(Number(e.target.value))}
+                          className={`flex-1 h-2 rounded-lg appearance-none cursor-pointer ${
+                            isNight ? 'bg-[#1a1625] accent-[#9b7bb8]' : 'bg-[#f0e8eb] accent-[#d46a7e]'
+                          }`}
+                        />
+                        <span className={`text-sm font-medium w-12 text-right ${theme.accentText}`}>{progress2}%</span>
+                      </div>
+                    )}
+                  </div>
+                  <div className="space-y-2">
+                    <input
+                      type="text"
+                      value={kr3}
+                      onChange={(e) => setKr3(e.target.value)}
+                      placeholder="KR 3"
+                    />
+                    {kr3 && (
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="range"
+                          min="0"
+                          max="100"
+                          value={progress3}
+                          onChange={(e) => setProgress3(Number(e.target.value))}
+                          className={`flex-1 h-2 rounded-lg appearance-none cursor-pointer ${
+                            isNight ? 'bg-[#1a1625] accent-[#9b7bb8]' : 'bg-[#f0e8eb] accent-[#d46a7e]'
+                          }`}
+                        />
+                        <span className={`text-sm font-medium w-12 text-right ${theme.accentText}`}>{progress3}%</span>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
 
               {viewType === 'weekly' ? (
                 <div>
-                  <label className="block text-sm text-[#4a3f42]/70 mb-1">
+                  <label className={`block text-sm mb-1 ${theme.textMuted}`}>
                     フォーカス
                   </label>
                   <input
@@ -255,7 +330,7 @@ export default function OKRPage() {
                 </div>
               ) : (
                 <div>
-                  <label className="block text-sm text-[#4a3f42]/70 mb-1">
+                  <label className={`block text-sm mb-1 ${theme.textMuted}`}>
                     Identity Focus
                   </label>
                   <input
@@ -273,9 +348,13 @@ export default function OKRPage() {
                   id="isShared"
                   checked={isShared}
                   onChange={(e) => setIsShared(e.target.checked)}
-                  className="w-4 h-4 text-[#d46a7e] border-[#d46a7e]/30 rounded focus:ring-[#d46a7e]"
+                  className={`w-4 h-4 rounded focus:ring-2 ${
+                    isNight
+                      ? 'text-[#9b7bb8] border-[#9b7bb8]/30 focus:ring-[#9b7bb8]'
+                      : 'text-[#d46a7e] border-[#d46a7e]/30 focus:ring-[#d46a7e]'
+                  }`}
                 />
-                <label htmlFor="isShared" className="text-sm text-[#4a3f42]">
+                <label htmlFor="isShared" className={`text-sm ${theme.text}`}>
                   みんなに公開する
                 </label>
               </div>
@@ -285,7 +364,7 @@ export default function OKRPage() {
               )}
 
               {successMessage && (
-                <div className="text-green-600 text-sm text-center bg-green-50 px-4 py-2 rounded-lg">
+                <div className={`text-green-600 text-sm text-center px-4 py-2 rounded-lg ${isNight ? 'bg-green-900/30' : 'bg-green-50'}`}>
                   {successMessage}
                 </div>
               )}

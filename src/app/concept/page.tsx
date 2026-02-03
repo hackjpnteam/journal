@@ -1,10 +1,13 @@
 'use client'
 
+import { useState } from 'react'
 import { TopBar } from '@/components/TopBar'
 import { useSession } from 'next-auth/react'
+import { GrowthTree } from '@/components/GrowthTree'
 
 export default function ConceptPage() {
   const { data: session } = useSession()
+  const [previewProgress, setPreviewProgress] = useState(100)
 
   return (
     <div className="min-h-screen bg-[#f0e8eb]">
@@ -267,6 +270,166 @@ export default function ConceptPage() {
             究極の朝活は、<br />
             <strong>このすべてをつなぐためにあります。</strong>
           </p>
+        </section>
+
+        {/* Growth Tree */}
+        <section className="mb-16">
+          <h2 className="text-xl font-bold text-[#4a3f42] mb-6 pb-2 border-b-2 border-[#d46a7e]/30">
+            成長する木
+          </h2>
+          <p className="text-sm text-[#4a3f42]/60 mb-6">― 毎日の投稿で木を育てよう ―</p>
+
+          <div className="bg-white rounded-xl p-6 mb-6">
+            <p className="text-[#4a3f42] mb-4 text-center">
+              マイページでは、今月の投稿率に応じて<br />
+              <strong className="text-[#d46a7e]">あなただけの木</strong>が成長していきます。
+            </p>
+
+            {/* プレビュー */}
+            <div className="bg-gradient-to-b from-[#e3f2fd] to-[#f0e8eb] rounded-xl p-4 mb-6">
+              <GrowthTree
+                progress={previewProgress}
+                postsCount={Math.round(28 * previewProgress / 100)}
+                daysInMonth={28}
+              />
+            </div>
+
+            {/* スライダー */}
+            <div className="mb-6">
+              <p className="text-sm text-[#4a3f42]/60 text-center mb-2">
+                スライダーで成長を確認してみよう
+              </p>
+              <input
+                type="range"
+                min="0"
+                max="100"
+                value={previewProgress}
+                onChange={(e) => setPreviewProgress(Number(e.target.value))}
+                className="w-full h-2 bg-[#e8f5e9] rounded-lg appearance-none cursor-pointer accent-[#4caf50]"
+              />
+              <div className="flex justify-between text-xs text-[#4a3f42]/50 mt-1">
+                <span>0%</span>
+                <span>50%</span>
+                <span>100%</span>
+              </div>
+            </div>
+          </div>
+
+          {/* 成長段階の説明 */}
+          <div className="space-y-3 mb-8">
+            <h3 className="font-bold text-[#4a3f42] mb-3">成長の段階</h3>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="bg-white rounded-lg p-3 text-center">
+                <div className="text-2xl mb-1">🌱</div>
+                <p className="text-xs text-[#4a3f42]/60">0%</p>
+                <p className="text-sm text-[#4a3f42]">種を植える</p>
+              </div>
+              <div className="bg-white rounded-lg p-3 text-center">
+                <div className="text-2xl mb-1">🌿</div>
+                <p className="text-xs text-[#4a3f42]/60">1-19%</p>
+                <p className="text-sm text-[#4a3f42]">芽が出る</p>
+              </div>
+              <div className="bg-white rounded-lg p-3 text-center">
+                <div className="text-2xl mb-1">🪴</div>
+                <p className="text-xs text-[#4a3f42]/60">20-39%</p>
+                <p className="text-sm text-[#4a3f42]">木らしくなる</p>
+              </div>
+              <div className="bg-white rounded-lg p-3 text-center">
+                <div className="text-2xl mb-1">🌳</div>
+                <p className="text-xs text-[#4a3f42]/60">40-59%</p>
+                <p className="text-sm text-[#4a3f42]">葉が茂る</p>
+              </div>
+              <div className="bg-white rounded-lg p-3 text-center">
+                <div className="text-2xl mb-1">✨</div>
+                <p className="text-xs text-[#4a3f42]/60">60-79%</p>
+                <p className="text-sm text-[#4a3f42]">実がなりそう</p>
+              </div>
+              <div className="bg-white rounded-lg p-3 text-center">
+                <div className="text-2xl mb-1">🍎</div>
+                <p className="text-xs text-[#4a3f42]/60">80-99%</p>
+                <p className="text-sm text-[#4a3f42]">実がなる!</p>
+              </div>
+            </div>
+            <div className="bg-gradient-to-r from-[#d46a7e]/10 to-[#fff5f7] rounded-lg p-4 text-center">
+              <div className="text-3xl mb-2">🎉</div>
+              <p className="text-xs text-[#d46a7e]">100% 達成!</p>
+              <p className="font-bold text-[#d46a7e]">満開の木が咲きました!</p>
+            </div>
+          </div>
+
+          {/* 月別テーマ */}
+          <div className="bg-white rounded-xl p-6">
+            <h3 className="font-bold text-[#4a3f42] mb-4 text-center">月替わりフルーツ</h3>
+            <p className="text-sm text-[#4a3f42]/70 text-center mb-4">
+              毎月、実る果物が変わります
+            </p>
+            <div className="grid grid-cols-4 gap-2 text-center">
+              <div className="bg-[#fff3e0] rounded-lg p-2">
+                <p className="text-lg">🍊</p>
+                <p className="text-xs text-[#4a3f42]">1月</p>
+                <p className="text-xs text-[#4a3f42]/60">みかん</p>
+              </div>
+              <div className="bg-[#ffebee] rounded-lg p-2">
+                <p className="text-lg">🍎</p>
+                <p className="text-xs text-[#4a3f42]">2月</p>
+                <p className="text-xs text-[#4a3f42]/60">りんご</p>
+              </div>
+              <div className="bg-[#ffebee] rounded-lg p-2">
+                <p className="text-lg">🍓</p>
+                <p className="text-xs text-[#4a3f42]">3月</p>
+                <p className="text-xs text-[#4a3f42]/60">いちご</p>
+              </div>
+              <div className="bg-[#ffcdd2] rounded-lg p-2">
+                <p className="text-lg">🍒</p>
+                <p className="text-xs text-[#4a3f42]">4月</p>
+                <p className="text-xs text-[#4a3f42]/60">さくらんぼ</p>
+              </div>
+              <div className="bg-[#e8f5e9] rounded-lg p-2">
+                <p className="text-lg">🍈</p>
+                <p className="text-xs text-[#4a3f42]">5月</p>
+                <p className="text-xs text-[#4a3f42]/60">メロン</p>
+              </div>
+              <div className="bg-[#fce4ec] rounded-lg p-2">
+                <p className="text-lg">🍑</p>
+                <p className="text-xs text-[#4a3f42]">6月</p>
+                <p className="text-xs text-[#4a3f42]/60">もも</p>
+              </div>
+              <div className="bg-[#e8f5e9] rounded-lg p-2">
+                <p className="text-lg">🍉</p>
+                <p className="text-xs text-[#4a3f42]">7月</p>
+                <p className="text-xs text-[#4a3f42]/60">すいか</p>
+              </div>
+              <div className="bg-[#fff8e1] rounded-lg p-2">
+                <p className="text-lg">🥭</p>
+                <p className="text-xs text-[#4a3f42]">8月</p>
+                <p className="text-xs text-[#4a3f42]/60">マンゴー</p>
+              </div>
+              <div className="bg-[#f3e5f5] rounded-lg p-2">
+                <p className="text-lg">🍇</p>
+                <p className="text-xs text-[#4a3f42]">9月</p>
+                <p className="text-xs text-[#4a3f42]/60">ぶどう</p>
+              </div>
+              <div className="bg-[#fff3e0] rounded-lg p-2">
+                <p className="text-lg">🍊</p>
+                <p className="text-xs text-[#4a3f42]">10月</p>
+                <p className="text-xs text-[#4a3f42]/60">柿</p>
+              </div>
+              <div className="bg-[#f0f4c3] rounded-lg p-2">
+                <p className="text-lg">🍐</p>
+                <p className="text-xs text-[#4a3f42]">11月</p>
+                <p className="text-xs text-[#4a3f42]/60">洋梨</p>
+              </div>
+              <div className="bg-[#fff3e0] rounded-lg p-2">
+                <p className="text-lg">🍊</p>
+                <p className="text-xs text-[#4a3f42]">12月</p>
+                <p className="text-xs text-[#4a3f42]/60">冬みかん</p>
+              </div>
+            </div>
+            <p className="text-center text-sm text-[#4a3f42]/60 mt-4">
+              毎日の投稿を続けて、<br />
+              <strong className="text-[#d46a7e]">今月の果物を実らせよう!</strong>
+            </p>
+          </div>
         </section>
 
         {/* About Community */}

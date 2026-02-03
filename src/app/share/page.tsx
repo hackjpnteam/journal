@@ -6,6 +6,7 @@ import { TopBar } from '@/components/TopBar'
 import { Card, CardTitle } from '@/components/Card'
 import { MoodPicker } from '@/components/MoodPicker'
 import { MOOD_EMOJI, type Mood } from '@/lib/constants'
+import { useTimeTheme, themeColors } from '@/hooks/useTimeTheme'
 import { format } from 'date-fns'
 import { ja } from 'date-fns/locale'
 
@@ -71,6 +72,10 @@ type WindowStatus = 'before' | 'open' | 'after'
 
 export default function SharePage() {
   const { data: session } = useSession()
+  const timeTheme = useTimeTheme()
+  const theme = themeColors[timeTheme]
+  const isNight = timeTheme === 'night'
+
   const [shares, setShares] = useState<Share[]>([])
   const [myCoachingNote, setMyCoachingNote] = useState<CoachingNote | null>(null)
   const [loading, setLoading] = useState(true)
@@ -95,8 +100,8 @@ export default function SharePage() {
     const utcMinutes = now.getUTCHours() * 60 + now.getUTCMinutes()
     const jstMinutes = (utcMinutes + jstOffset) % (24 * 60)
 
-    const openTime = 7 * 60
-    const closeTime = 8 * 60
+    const openTime = 6 * 60
+    const closeTime = 9 * 60
 
     if (jstMinutes < openTime) {
       setWindowStatus('before')
@@ -195,11 +200,11 @@ export default function SharePage() {
     }
     switch (windowStatus) {
       case 'before':
-        return '新規投稿は 7:00〜8:00 の間のみ可能です'
+        return '新規投稿は 6:00〜9:00 の間のみ可能です'
       case 'open':
         return '投稿可能です'
       case 'after':
-        return '新規投稿は 7:00〜8:00 の間のみ可能です'
+        return '新規投稿は 6:00〜9:00 の間のみ可能です'
     }
   }
 
@@ -208,34 +213,34 @@ export default function SharePage() {
   const canEdit = hasPosted
 
   return (
-    <div className="min-h-screen bg-[#f0e8eb]">
-      <TopBar />
+    <div className={`min-h-screen transition-colors duration-500 ${theme.bg}`}>
+      <TopBar isNight={isNight} />
 
       <main className="max-w-2xl mx-auto p-4 space-y-6">
         <div className="text-center py-4">
-          <p className="text-[#4a3f42]/60 text-sm">{today}</p>
-          <h1 className="text-xl font-semibold mt-1 text-[#4a3f42]">Morning Journal</h1>
-          <p className="text-sm text-[#4a3f42]/50 mt-1">朝の問い</p>
+          <p className={`text-sm ${theme.textMuted}`}>{today}</p>
+          <h1 className={`text-xl font-semibold mt-1 ${theme.text}`}>Morning Journal</h1>
+          <p className={`text-sm mt-1 ${theme.textFaint}`}>朝の問い</p>
           <p
             className={`text-sm mt-2 ${
-              windowStatus === 'open' || hasPosted ? 'text-green-600' : 'text-[#d46a7e]'
+              windowStatus === 'open' || hasPosted ? 'text-green-600' : theme.accentText
             }`}
           >
             {getWindowMessage()}
           </p>
           {successMessage && (
-            <p className="text-sm mt-2 text-green-600 bg-green-50 px-4 py-2 rounded-lg inline-block">
+            <p className={`text-sm mt-2 text-green-600 px-4 py-2 rounded-lg inline-block ${isNight ? 'bg-green-900/30' : 'bg-green-50'}`}>
               {successMessage}
             </p>
           )}
         </div>
 
         {(!hasPosted || isEditing) && (
-          <Card>
-            <CardTitle>あなたのMorning Journal</CardTitle>
+          <Card isNight={isNight}>
+            <CardTitle isNight={isNight}>あなたのMorning Journal</CardTitle>
             <form onSubmit={handleSubmit} className="space-y-6">
               <div>
-                <label className="block text-sm font-medium text-[#4a3f42] mb-2">
+                <label className={`block text-sm font-medium mb-2 ${theme.text}`}>
                   今日の自分の状態は？
                 </label>
                 <MoodPicker
@@ -246,7 +251,7 @@ export default function SharePage() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-[#4a3f42] mb-1">
+                <label className={`block text-sm font-medium mb-1 ${theme.text}`}>
                   今日、最も大切にする価値観・判断基準は？
                 </label>
                 <input
@@ -259,7 +264,7 @@ export default function SharePage() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-[#4a3f42] mb-1">
+                <label className={`block text-sm font-medium mb-1 ${theme.text}`}>
                   今日これができたら「前に進んだ」と言える行動は？
                 </label>
                 <input
@@ -272,10 +277,10 @@ export default function SharePage() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-[#4a3f42] mb-1">
+                <label className={`block text-sm font-medium mb-1 ${theme.text}`}>
                   今日、手放す思考・感情は？
                 </label>
-                <p className="text-xs text-[#4a3f42]/50 mb-2">
+                <p className={`text-xs mb-2 ${theme.textFaint}`}>
                   （不安・焦り・比較・恐れ など）
                 </p>
                 <input
@@ -287,11 +292,11 @@ export default function SharePage() {
                 />
               </div>
 
-              <div className="border-t border-[#d46a7e]/20 pt-6">
-                <label className="block text-sm font-medium text-[#4a3f42] mb-1">
+              <div className={`border-t pt-6 ${isNight ? 'border-[#9b7bb8]/20' : 'border-[#d46a7e]/20'}`}>
+                <label className={`block text-sm font-medium mb-1 ${theme.text}`}>
                   今日の宣言（1文）
                 </label>
-                <p className="text-xs text-[#4a3f42]/50 mb-2">
+                <p className={`text-xs mb-2 ${theme.textFaint}`}>
                   今日の自分は＿＿＿＿＿＿＿＿＿＿。
                 </p>
                 <input
@@ -320,7 +325,11 @@ export default function SharePage() {
                   <button
                     type="button"
                     onClick={() => setIsEditing(false)}
-                    className="px-4 py-2 bg-[#f0e8eb] hover:bg-[#d46a7e]/10 rounded-xl transition text-[#4a3f42]"
+                    className={`px-4 py-2 rounded-xl transition ${
+                      isNight
+                        ? 'bg-[#2d2438] hover:bg-[#3d3448] text-white'
+                        : 'bg-[#f0e8eb] hover:bg-[#d46a7e]/10 text-[#4a3f42]'
+                    }`}
                   >
                     キャンセル
                   </button>
@@ -331,44 +340,48 @@ export default function SharePage() {
         )}
 
         {hasPosted && !isEditing && (
-          <Card className="border-2 border-[#d46a7e]/30">
-            <CardTitle>あなたのMorning Journal</CardTitle>
+          <Card isNight={isNight} className={`border-2 ${isNight ? 'border-[#9b7bb8]/30' : 'border-[#d46a7e]/30'}`}>
+            <CardTitle isNight={isNight}>あなたのMorning Journal</CardTitle>
             <div className="space-y-4">
               <div className="flex items-center gap-3">
                 <span className="text-3xl">{MOOD_EMOJI[selectedMood!]}</span>
-                <span className="text-[#4a3f42]/60">今日の状態</span>
+                <span className={theme.textMuted}>今日の状態</span>
               </div>
 
               {value && (
                 <div>
-                  <p className="text-xs text-[#4a3f42]/50">大切にする価値観</p>
-                  <p className="text-[#4a3f42]">{value}</p>
+                  <p className={`text-xs ${theme.textFaint}`}>大切にする価値観</p>
+                  <p className={theme.text}>{value}</p>
                 </div>
               )}
 
               {action && (
                 <div>
-                  <p className="text-xs text-[#4a3f42]/50">前に進む行動</p>
-                  <p className="text-[#4a3f42]">{action}</p>
+                  <p className={`text-xs ${theme.textFaint}`}>前に進む行動</p>
+                  <p className={theme.text}>{action}</p>
                 </div>
               )}
 
               {letGo && (
                 <div>
-                  <p className="text-xs text-[#4a3f42]/50">手放すもの</p>
-                  <p className="text-[#4a3f42]">{letGo}</p>
+                  <p className={`text-xs ${theme.textFaint}`}>手放すもの</p>
+                  <p className={theme.text}>{letGo}</p>
                 </div>
               )}
 
-              <div className="border-t border-[#d46a7e]/20 pt-4">
-                <p className="text-xs text-[#4a3f42]/50">今日の宣言</p>
-                <p className="text-lg font-medium text-[#4a3f42]">{declaration}</p>
+              <div className={`border-t pt-4 ${isNight ? 'border-[#9b7bb8]/20' : 'border-[#d46a7e]/20'}`}>
+                <p className={`text-xs ${theme.textFaint}`}>今日の宣言</p>
+                <p className={`text-lg font-medium ${theme.text}`}>{declaration}</p>
               </div>
             </div>
 
             <button
               onClick={() => setIsEditing(true)}
-              className="mt-4 text-sm text-[#4a3f42]/60 hover:text-[#d46a7e] transition"
+              className={`mt-4 text-sm transition ${
+                isNight
+                  ? 'text-white/70 hover:text-[#c9a0dc]'
+                  : 'text-[#4a3f42]/60 hover:text-[#d46a7e]'
+              }`}
             >
               編集する
             </button>
@@ -376,31 +389,31 @@ export default function SharePage() {
         )}
 
         {myCoachingNote && (myCoachingNote.redline || myCoachingNote.question) && (
-          <Card className="border-2 border-[#d46a7e]/30">
-            <CardTitle>コーチからのフィードバック</CardTitle>
+          <Card isNight={isNight} className={`border-2 ${isNight ? 'border-[#9b7bb8]/30' : 'border-[#d46a7e]/30'}`}>
+            <CardTitle isNight={isNight}>コーチからのフィードバック</CardTitle>
             {myCoachingNote.redline && (
               <div className="mb-4">
-                <p className="text-sm text-[#4a3f42]/60 mb-1">赤入れ</p>
-                <p className="text-[#d46a7e]">{myCoachingNote.redline}</p>
+                <p className={`text-sm mb-1 ${theme.textMuted}`}>赤入れ</p>
+                <p className={isNight ? 'text-[#c9a0dc]' : 'text-[#d46a7e]'}>{myCoachingNote.redline}</p>
               </div>
             )}
             {myCoachingNote.question && (
               <div>
-                <p className="text-sm text-[#4a3f42]/60 mb-1">問い</p>
-                <p className="text-[#c25a6e]">{myCoachingNote.question}</p>
+                <p className={`text-sm mb-1 ${theme.textMuted}`}>問い</p>
+                <p className={isNight ? 'text-[#b890cc]' : 'text-[#c25a6e]'}>{myCoachingNote.question}</p>
               </div>
             )}
           </Card>
         )}
 
-        <Card>
-          <CardTitle>みんなの宣言</CardTitle>
+        <Card isNight={isNight}>
+          <CardTitle isNight={isNight}>みんなの宣言</CardTitle>
           {loading ? (
-            <div className="text-center text-[#4a3f42]/50">読み込み中...</div>
+            <div className={`text-center ${theme.textFaint}`}>読み込み中...</div>
           ) : (
             <div className="space-y-4">
               {shares.length === 0 && (
-                <div className="text-center text-[#4a3f42]/50 mb-4 pb-4 border-b border-[#d46a7e]/20">
+                <div className={`text-center mb-4 pb-4 border-b ${theme.textFaint} ${isNight ? 'border-[#9b7bb8]/20' : 'border-[#d46a7e]/20'}`}>
                   <p>まだ今日の投稿はありません</p>
                   <p className="text-xs mt-1">以下はサンプル表示です</p>
                 </div>
@@ -410,8 +423,8 @@ export default function SharePage() {
                   key={share.id}
                   className={`p-4 rounded-lg ${
                     share.userId === session?.user?.id
-                      ? 'bg-[#d46a7e]/10'
-                      : 'bg-[#f0e8eb]'
+                      ? isNight ? 'bg-[#9b7bb8]/10' : 'bg-[#d46a7e]/10'
+                      : isNight ? 'bg-[#2d2438]' : 'bg-[#f0e8eb]'
                   }`}
                 >
                   <div className="flex items-center gap-3 mb-2">
@@ -423,26 +436,26 @@ export default function SharePage() {
                           className="w-8 h-8 rounded-full object-cover"
                         />
                       ) : (
-                        <div className="w-8 h-8 rounded-full bg-[#d46a7e]/20 flex items-center justify-center">
-                          <svg className="w-4 h-4 text-[#d46a7e]/60" fill="currentColor" viewBox="0 0 24 24">
+                        <div className={`w-8 h-8 rounded-full flex items-center justify-center ${isNight ? 'bg-[#9b7bb8]/20' : 'bg-[#d46a7e]/20'}`}>
+                          <svg className={`w-4 h-4 ${isNight ? 'text-[#9b7bb8]/60' : 'text-[#d46a7e]/60'}`} fill="currentColor" viewBox="0 0 24 24">
                             <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
                           </svg>
                         </div>
                       )}
-                      <span className="text-sm font-medium text-[#4a3f42]">{share.userName}</span>
+                      <span className={`text-sm font-medium ${theme.text}`}>{share.userName}</span>
                     </div>
                     <span className="text-2xl">{MOOD_EMOJI[share.mood]}</span>
                   </div>
 
                   {(share.value || share.action || share.letGo) && (
-                    <div className="text-sm text-[#4a3f42]/70 space-y-1 mb-2 pl-9">
+                    <div className={`text-sm space-y-1 mb-2 pl-9 ${theme.textMuted}`}>
                       {share.value && <p>価値観: {share.value}</p>}
                       {share.action && <p>行動: {share.action}</p>}
                       {share.letGo && <p>手放す: {share.letGo}</p>}
                     </div>
                   )}
 
-                  <p className="text-[#4a3f42] font-medium pl-9">{share.declaration}</p>
+                  <p className={`font-medium pl-9 ${theme.text}`}>{share.declaration}</p>
                 </div>
               ))}
             </div>

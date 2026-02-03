@@ -14,7 +14,11 @@ interface MonthStats {
   moodCounts: Record<Mood, number>
 }
 
-export function CalendarYear() {
+interface CalendarYearProps {
+  isNight?: boolean
+}
+
+export function CalendarYear({ isNight = false }: CalendarYearProps) {
   const [year, setYear] = useState(new Date().getFullYear())
   const [data, setData] = useState<DayData[]>([])
   const [loading, setLoading] = useState(true)
@@ -66,21 +70,29 @@ export function CalendarYear() {
       <div className="flex items-center justify-between mb-6">
         <button
           onClick={() => setYear(year - 1)}
-          className="p-2 hover:bg-[#d46a7e]/10 rounded-lg transition text-[#d46a7e]"
+          className={`p-2 rounded-lg transition ${
+            isNight
+              ? 'hover:bg-[#9b7bb8]/10 text-[#c9a0dc]'
+              : 'hover:bg-[#d46a7e]/10 text-[#d46a7e]'
+          }`}
         >
           ←
         </button>
-        <h3 className="text-lg font-semibold text-[#4a3f42]">{year}年</h3>
+        <h3 className={`text-lg font-semibold ${isNight ? 'text-white' : 'text-[#4a3f42]'}`}>{year}年</h3>
         <button
           onClick={() => setYear(year + 1)}
-          className="p-2 hover:bg-[#d46a7e]/10 rounded-lg transition text-[#d46a7e]"
+          className={`p-2 rounded-lg transition ${
+            isNight
+              ? 'hover:bg-[#9b7bb8]/10 text-[#c9a0dc]'
+              : 'hover:bg-[#d46a7e]/10 text-[#d46a7e]'
+          }`}
         >
           →
         </button>
       </div>
 
       {loading ? (
-        <div className="text-center text-[#4a3f42]/50">読み込み中...</div>
+        <div className={`text-center ${isNight ? 'text-white/50' : 'text-[#4a3f42]/50'}`}>読み込み中...</div>
       ) : (
         <div className="grid grid-cols-3 gap-4">
           {months.map((month) => {
@@ -91,13 +103,13 @@ export function CalendarYear() {
             return (
               <div
                 key={month}
-                className="bg-[#f0e8eb] rounded-xl p-4"
+                className={`rounded-xl p-4 ${isNight ? 'bg-[#1a1625]' : 'bg-[#f0e8eb]'}`}
               >
-                <div className="text-sm font-medium text-[#4a3f42] mb-2">{month}月</div>
-                <div className="text-2xl font-bold text-[#d46a7e] mb-1">
+                <div className={`text-sm font-medium mb-2 ${isNight ? 'text-white' : 'text-[#4a3f42]'}`}>{month}月</div>
+                <div className={`text-2xl font-bold mb-1 ${isNight ? 'text-[#c9a0dc]' : 'text-[#d46a7e]'}`}>
                   {rate}%
                 </div>
-                <div className="text-xs text-[#4a3f42]/50 mb-2">
+                <div className={`text-xs mb-2 ${isNight ? 'text-white/50' : 'text-[#4a3f42]/50'}`}>
                   {stats.total}日投稿
                 </div>
                 <div className="flex flex-wrap gap-1">

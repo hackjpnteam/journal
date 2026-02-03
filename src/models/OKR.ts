@@ -7,6 +7,7 @@ export interface IOKR extends Document {
   periodKey: string
   objective: string
   keyResults: string[]
+  keyResultsProgress: number[] // 各KRの進捗率 (0-100)
   focus?: string
   identityFocus?: string
   isShared: boolean
@@ -21,6 +22,7 @@ const OKRSchema = new Schema<IOKR>(
     periodKey: { type: String, required: true },
     objective: { type: String, required: true },
     keyResults: { type: [String], default: [] },
+    keyResultsProgress: { type: [Number], default: [0, 0, 0] },
     focus: { type: String },
     identityFocus: { type: String },
     isShared: { type: Boolean, default: false },

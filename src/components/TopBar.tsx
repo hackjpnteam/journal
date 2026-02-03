@@ -4,6 +4,7 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { signOut, useSession } from 'next-auth/react'
+import { useTimeTheme } from '@/hooks/useTimeTheme'
 
 const navItems = [
   { href: '/', label: 'ホーム' },
@@ -15,17 +16,28 @@ const navItems = [
   { href: '/profile', label: 'マイページ' },
 ]
 
-export function TopBar() {
+interface TopBarProps {
+  isNight?: boolean
+}
+
+export function TopBar({ isNight: isNightProp }: TopBarProps) {
   const pathname = usePathname()
   const { data: session } = useSession()
   const [isMenuOpen, setIsMenuOpen] = useState(false)
+  const timeTheme = useTimeTheme()
+
+  // propsで指定されていない場合はhookから取得
+  const isNight = isNightProp ?? (timeTheme === 'night')
+
+  const bgColor = isNight ? 'bg-[#2d2438]' : 'bg-[#c8848e]'
+  const borderColor = isNight ? 'border-[#9b7bb8]/30' : 'border-white/20'
 
   return (
-    <header className="sticky top-0 z-50 bg-[#d46a7e] shadow-md">
+    <header className={`sticky top-0 z-50 shadow-md transition-colors duration-500 ${bgColor}`}>
       <div className="max-w-4xl mx-auto px-4 py-3">
         <div className="flex items-center justify-between">
-          <Link href="/" className="text-lg font-semibold text-white">
-            究極の朝活
+          <Link href="/" className="text-lg font-semibold text-white flex items-center gap-2">
+            {isNight ? '🌙' : '☀️'} 究極の朝活
           </Link>
 
           {/* Desktop Navigation */}
@@ -74,7 +86,7 @@ export function TopBar() {
 
         {/* Mobile Navigation */}
         {isMenuOpen && (
-          <nav className="md:hidden mt-3 pt-3 border-t border-white/20">
+          <nav className={`md:hidden mt-3 pt-3 border-t ${borderColor}`}>
             <div className="grid grid-cols-3 gap-2">
               {navItems.map((item) => (
                 <Link

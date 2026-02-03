@@ -15,7 +15,24 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="ja">
-      <body className="antialiased">
+      <head>
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@400;500;600;700&display=swap" rel="stylesheet" />
+      </head>
+      <body className="antialiased" suppressHydrationWarning>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              (function() {
+                var hour = new Date().getHours();
+                if (hour >= 17 || hour < 6) {
+                  document.body.classList.add('night-mode');
+                }
+              })();
+            `,
+          }}
+        />
         <Providers>{children}</Providers>
         <Script
           id="saleschat-widget"

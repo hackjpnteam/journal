@@ -17,34 +17,31 @@ export async function GET() {
 
     await connectDB()
 
-    // 実ユーザーのIDを取得（サンプル・テストユーザーを除外）
-    const realUsers = await User.find({
-      email: { $not: /sample|test|example|demo/i }
-    }).select('_id')
-    const realUserIds = realUsers.map(u => u._id)
-
     // 過去7日間の投稿を取得
     const sevenDaysAgo = new Date()
     sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7)
 
-    // 朝の投稿を取得（実ユーザーのみ）
-    const morningPosts = await DailyShare.find({
-      createdAt: { $gte: sevenDaysAgo },
-      userId: { $in: realUserIds }
-    }).sort({ createdAt: -1 }).limit(50)
-
-    // 夜の投稿を取得（実ユーザーのみ）
-    const nightPosts = await NightJournal.find({
-      createdAt: { $gte: sevenDaysAgo },
-      userId: { $in: realUserIds }
-    }).sort({ createdAt: -1 }).limit(50)
-
-    // 公開OKRを取得（実ユーザーのみ）
-    const sharedOKRs = await OKR.find({
-      isShared: true,
-      updatedAt: { $gte: sevenDaysAgo },
-      userId: { $in: realUserIds }
-    }).sort({ updatedAt: -1 }).limit(30)
+    // 並列でクエリ実行 + .lean() で高速化
+    const [morningPosts, nightPosts, sharedOKRs] = await Promise.all([
+      // 朝の投稿
+      DailyShare.find({ createdAt: { $gte: sevenDaysAgo } })
+        .select('userId mood declaration value action letGo createdAt')
+        .sort({ createdAt: -1 })
+        .limit(30)
+        .lean(),
+      // 夜の投稿（公開のみ）
+      NightJournal.find({ createdAt: { $gte: sevenDaysAgo }, isShared: true })
+        .select('userId proudChoice learning tomorrowMessage selfScore createdAt')
+        .sort({ createdAt: -1 })
+        .limit(30)
+        .lean(),
+      // 公開OKR
+      OKR.find({ isShared: true, updatedAt: { $gte: sevenDaysAgo } })
+        .select('userId type periodKey objective keyResults keyResultsProgress focus identityFocus updatedAt')
+        .sort({ updatedAt: -1 })
+        .limit(20)
+        .lean(),
+    ])
 
     // ユーザー情報を取得
     const userIds = [
@@ -55,35 +52,58 @@ export async function GET() {
       ])
     ]
     const users = await User.find({ _id: { $in: userIds } })
-    const userMap = new Map(users.map(u => [u._id.toString(), u]))
+      .select('name profileImage email')
+      .lean()
+
+    // テスト/サンプルユーザーを除外
+    const realUserMap = new Map(
+      users
+        .filter(u => !/sample|test|example|demo/i.test(u.email || ''))
+        .map(u => [u._id.toString(), u])
+    )
+
+    // 実ユーザーの投稿のみフィルタリング
+    const filteredMorning = morningPosts.filter(p => realUserMap.has(p.userId.toString()))
+    const filteredNight = nightPosts.filter(p => realUserMap.has(p.userId.toString()))
+    const filteredOKRs = sharedOKRs.filter(o => realUserMap.has(o.userId.toString()))
 
     // 全投稿IDを収集して応援データを取得
     const allPostIds = [
-      ...morningPosts.map(p => p._id),
-      ...nightPosts.filter(p => p.isShared).map(p => p._id),
-      ...sharedOKRs.map(o => o._id),
+      ...filteredMorning.map(p => p._id),
+      ...filteredNight.map(p => p._id),
+      ...filteredOKRs.map(o => o._id),
     ]
     const allCheers = await Cheer.find({ postId: { $in: allPostIds } })
+      .select('postId userId userName')
+      .lean()
 
-    // 投稿IDごとの応援データをマップ化
+    // 応援したユーザーの最新情報を取得
+    const cheerUserIds = [...new Set(allCheers.map(c => c.userId.toString()))]
+    const cheerUsers = await User.find({ _id: { $in: cheerUserIds } })
+      .select('name profileImage')
+      .lean()
+    const cheerUserMap = new Map(cheerUsers.map(u => [u._id.toString(), u]))
+
+    // 投稿IDごとの応援データをマップ化（最新のユーザー情報を使用）
     const cheersMap = new Map<string, { id: string; userId: string; userName: string; userImage: string | null }[]>()
     allCheers.forEach(cheer => {
       const postId = cheer.postId.toString()
+      const cheerUser = cheerUserMap.get(cheer.userId.toString())
       if (!cheersMap.has(postId)) {
         cheersMap.set(postId, [])
       }
       cheersMap.get(postId)!.push({
         id: cheer._id.toString(),
         userId: cheer.userId.toString(),
-        userName: cheer.userName,
-        userImage: cheer.userImage || null,
+        userName: cheerUser?.name || cheer.userName,
+        userImage: cheerUser?.profileImage || null,
       })
     })
 
     // タイムライン形式に変換
     const timeline = [
-      ...morningPosts.map(post => {
-        const user = userMap.get(post.userId.toString())
+      ...filteredMorning.map(post => {
+        const user = realUserMap.get(post.userId.toString())
         const postId = post._id.toString()
         return {
           id: postId,
@@ -100,8 +120,8 @@ export async function GET() {
           cheers: cheersMap.get(postId) || [],
         }
       }),
-      ...nightPosts.filter(post => post.isShared).map(post => {
-        const user = userMap.get(post.userId.toString())
+      ...filteredNight.map(post => {
+        const user = realUserMap.get(post.userId.toString())
         const postId = post._id.toString()
         return {
           id: postId,
@@ -117,8 +137,8 @@ export async function GET() {
           cheers: cheersMap.get(postId) || [],
         }
       }),
-      ...sharedOKRs.map(okr => {
-        const user = userMap.get(okr.userId.toString())
+      ...filteredOKRs.map(okr => {
+        const user = realUserMap.get(okr.userId.toString())
         const postId = okr._id.toString()
         return {
           id: postId,
@@ -130,6 +150,7 @@ export async function GET() {
           periodKey: okr.periodKey,
           objective: okr.objective,
           keyResults: okr.keyResults,
+          keyResultsProgress: okr.keyResultsProgress,
           focus: okr.focus,
           identityFocus: okr.identityFocus,
           createdAt: okr.updatedAt,
@@ -138,7 +159,11 @@ export async function GET() {
       }),
     ].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
 
-    return NextResponse.json({ timeline: timeline.slice(0, 30) })
+    // キャッシュヘッダー付きで返却（10秒キャッシュ）
+    return NextResponse.json(
+      { timeline: timeline.slice(0, 30) },
+      { headers: { 'Cache-Control': 'private, max-age=10, stale-while-revalidate=30' } }
+    )
   } catch (error) {
     console.error('Get timeline error:', error)
     return NextResponse.json({ error: '取得に失敗しました' }, { status: 500 })

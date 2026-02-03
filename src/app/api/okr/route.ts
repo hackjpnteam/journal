@@ -10,6 +10,7 @@ const okrSchema = z.object({
   periodKey: z.string().min(1),
   objective: z.string().min(1, '目標を入力してください'),
   keyResults: z.array(z.string()).max(3),
+  keyResultsProgress: z.array(z.number().min(0).max(100)).max(3).optional(),
   focus: z.string().optional(),
   identityFocus: z.string().optional(),
   isShared: z.boolean().optional(),
@@ -57,6 +58,9 @@ export async function POST(req: NextRequest) {
 
     await connectDB()
 
+    const filteredKeyResults = data.keyResults.filter((kr) => kr.trim())
+    const progress = data.keyResultsProgress || [0, 0, 0]
+
     const okr = await OKR.findOneAndUpdate(
       {
         userId: session.user.id,
@@ -64,9 +68,17 @@ export async function POST(req: NextRequest) {
         periodKey: data.periodKey,
       },
       {
-        userId: session.user.id,
-        ...data,
-        keyResults: data.keyResults.filter((kr) => kr.trim()),
+        $set: {
+          userId: session.user.id,
+          type: data.type,
+          periodKey: data.periodKey,
+          objective: data.objective,
+          keyResults: filteredKeyResults,
+          keyResultsProgress: progress,
+          focus: data.focus,
+          identityFocus: data.identityFocus,
+          isShared: data.isShared || false,
+        }
       },
       { upsert: true, new: true }
     )

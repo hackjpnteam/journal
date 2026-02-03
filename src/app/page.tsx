@@ -5,7 +5,9 @@ import Link from 'next/link'
 import { useSession } from 'next-auth/react'
 import { TopBar } from '@/components/TopBar'
 import { Card, CardTitle } from '@/components/Card'
+import { Forest } from '@/components/Forest'
 import { MOOD_EMOJI, type Mood } from '@/lib/constants'
+import { useTimeTheme, themeColors } from '@/hooks/useTimeTheme'
 import { format } from 'date-fns'
 import { ja } from 'date-fns/locale'
 
@@ -40,6 +42,7 @@ interface TimelineItem {
   periodKey?: string
   objective?: string
   keyResults?: string[]
+  keyResultsProgress?: number[]
   focus?: string
   identityFocus?: string
 }
@@ -52,17 +55,34 @@ interface CoachingNote {
 interface OKRData {
   objective: string
   keyResults: string[]
+  keyResultsProgress?: number[]
   focus?: string
 }
 
+interface ForestUser {
+  userId: string
+  name: string
+  profileImage: string | null
+  postCount: number
+  progress: number
+}
+
+type WeatherType = 'clear' | 'partly_cloudy' | 'cloudy' | 'rain' | 'drizzle' | 'snow' | 'thunderstorm' | 'fog'
+
 export default function HomePage() {
   const { data: session, status } = useSession()
+  const timeTheme = useTimeTheme()
+  const theme = themeColors[timeTheme]
+  const isNight = timeTheme === 'night'
   const [timeline, setTimeline] = useState<TimelineItem[]>([])
   const [coachingNote, setCoachingNote] = useState<CoachingNote | null>(null)
   const [weeklyOKR, setWeeklyOKR] = useState<OKRData | null>(null)
+  const [weeklyAverageScore, setWeeklyAverageScore] = useState<number | null>(null)
+  const [forest, setForest] = useState<ForestUser[]>([])
+  const [weather, setWeather] = useState<WeatherType>('clear')
+  const [weatherLocation, setWeatherLocation] = useState<string>('')
   const [loading, setLoading] = useState(true)
   const [deleting, setDeleting] = useState<string | null>(null)
-  const [cheeringPost, setCheeringPost] = useState<string | null>(null)
   const [userName, setUserName] = useState<string>('')
 
   const today = format(new Date(), 'yyyy年M月d日（E）', { locale: ja })
@@ -109,6 +129,30 @@ export default function HomePage() {
           const profileData = await profileRes.json()
           setUserName(profileData.name || '')
         }
+
+        // 今週の夜の投稿の平均スコアを取得
+        const nightRes = await fetch('/api/night?weeklyAvg=true')
+        if (nightRes.ok) {
+          const nightData = await nightRes.json()
+          if (nightData.weeklyAverageScore !== null) {
+            setWeeklyAverageScore(nightData.weeklyAverageScore)
+          }
+        }
+
+        // みんなの木の状態を取得
+        const forestRes = await fetch('/api/forest')
+        if (forestRes.ok) {
+          const forestData = await forestRes.json()
+          setForest(forestData.forest || [])
+        }
+
+        // ユーザーの地域の天気を取得
+        const weatherRes = await fetch('/api/weather')
+        if (weatherRes.ok) {
+          const weatherData = await weatherRes.json()
+          setWeather(weatherData.weather || 'clear')
+          setWeatherLocation(weatherData.location || '')
+        }
       } catch (error) {
         console.error('Failed to fetch data:', error)
       } finally {
@@ -145,29 +189,29 @@ export default function HomePage() {
   const handleCheer = async (postId: string, postType: string) => {
     if (!session?.user) return
 
-    setCheeringPost(postId)
-    try {
-      // 応援する（何回でも可能）
-      const res = await fetch('/api/cheer', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ postId, postType }),
-      })
-      if (res.ok) {
-        const data = await res.json()
-        setTimeline(prev =>
-          prev.map(item =>
-            item.id === postId
-              ? { ...item, cheers: [...item.cheers, data.cheer] }
-              : item
-          )
-        )
-      }
-    } catch (error) {
-      console.error('Cheer error:', error)
-    } finally {
-      setCheeringPost(null)
+    // 楽観的更新: すぐにカウントを増やす
+    const tempCheer = {
+      id: `temp-${Date.now()}`,
+      userId: session.user.id,
+      userName: userName || session.user.name || '',
+      userImage: session.user.image || null,
     }
+    setTimeline(prev =>
+      prev.map(item =>
+        item.id === postId
+          ? { ...item, cheers: [...item.cheers, tempCheer] }
+          : item
+      )
+    )
+
+    // バックグラウンドでAPI呼び出し（待たない）
+    fetch('/api/cheer', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ postId, postType }),
+    }).catch(error => {
+      console.error('Cheer error:', error)
+    })
   }
 
   const getGreeting = () => {
@@ -192,13 +236,13 @@ export default function HomePage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#f0e8eb]">
-      <TopBar />
+    <div className={`min-h-screen transition-colors duration-500 ${theme.bg}`}>
+      <TopBar isNight={isNight} />
 
       <main className="max-w-2xl mx-auto p-4 space-y-6">
         <div className="text-center py-4">
-          <p className="text-[#4a3f42]/60 text-sm">{today}</p>
-          <h1 className="text-xl font-semibold mt-1 text-[#4a3f42]">
+          <p className={`text-sm ${theme.textMuted}`}>{today}</p>
+          <h1 className={`text-xl font-semibold mt-1 ${theme.text}`}>
             {getGreeting()}、{userName || session?.user?.name}さん
           </h1>
         </div>
@@ -207,42 +251,84 @@ export default function HomePage() {
         <div className="flex gap-3">
           <Link
             href="/share"
-            className="flex-1 flex items-center justify-center gap-2 bg-[#d46a7e] hover:bg-[#c25a6e] text-white font-semibold px-4 py-3 rounded-xl transition"
+            className={`flex-1 flex items-center justify-center gap-2 ${theme.accent} ${theme.accentHover} text-white font-semibold px-4 py-3 rounded-xl transition`}
           >
             <span>☀️</span>
             <span>朝の投稿</span>
           </Link>
           <Link
             href="/night"
-            className="flex-1 flex items-center justify-center gap-2 bg-[#4a3f42] hover:bg-[#3a2f32] text-white font-semibold px-4 py-3 rounded-xl transition"
+            className={`flex-1 flex items-center justify-center gap-2 ${theme.secondary} ${theme.secondaryHover} text-white font-semibold px-4 py-3 rounded-xl transition`}
           >
             <span>🌙</span>
             <span>夜の投稿</span>
           </Link>
         </div>
 
+        {/* みんなの森 */}
+        {forest.length > 0 && (
+          <Card isNight={isNight} className="overflow-hidden">
+            <div className="flex items-center justify-between">
+              <CardTitle isNight={isNight}>みんなの森 🌳</CardTitle>
+              {weatherLocation && (
+                <span className={`text-xs ${theme.textFaint}`}>
+                  📍 {weatherLocation}の天気
+                </span>
+              )}
+            </div>
+            <p className={`text-xs mb-3 ${theme.textMuted}`}>今月の投稿で木を育てよう</p>
+            <Forest
+              users={forest}
+              currentUserId={session?.user?.id}
+              weather={weather}
+              isNight={isNight}
+            />
+          </Card>
+        )}
+
         {/* 今週のOKR */}
         {weeklyOKR && (
-          <Card>
+          <Card isNight={isNight}>
             <div className="flex items-center justify-between mb-2">
-              <CardTitle>今週の目標</CardTitle>
+              <CardTitle isNight={isNight}>今週の目標</CardTitle>
               <Link
                 href="/okr"
-                className="text-xs text-[#d46a7e] hover:underline"
+                className={`text-xs hover:underline ${theme.accentText}`}
               >
                 編集 →
               </Link>
             </div>
-            <p className="text-[#4a3f42] font-medium mb-2">{weeklyOKR.objective}</p>
+            <p className={`font-medium mb-2 ${theme.text}`}>{weeklyOKR.objective}</p>
             {weeklyOKR.keyResults && weeklyOKR.keyResults.filter(kr => kr).length > 0 && (
-              <ul className="space-y-1 text-sm text-[#4a3f42]/70 mb-2">
-                {weeklyOKR.keyResults.filter(kr => kr).map((kr, i) => (
-                  <li key={i}>• {kr}</li>
-                ))}
+              <ul className={`space-y-2 text-sm mb-2 ${theme.textMuted}`}>
+                {weeklyOKR.keyResults.filter(kr => kr).map((kr, i) => {
+                  const progress = weeklyOKR.keyResultsProgress?.[i] || 0
+                  return (
+                    <li key={i} className="space-y-1">
+                      <div className="flex items-center justify-between">
+                        <span>• {kr}</span>
+                        <span className={`font-medium ${theme.accentText}`}>{progress}%</span>
+                      </div>
+                      <div className={`h-1.5 rounded-full overflow-hidden ${isNight ? 'bg-[#1a1625]' : 'bg-[#f0e8eb]'}`}>
+                        <div
+                          className={`h-full rounded-full transition-all duration-300 ${isNight ? 'bg-[#9b7bb8]' : 'bg-[#d46a7e]'}`}
+                          style={{ width: `${progress}%` }}
+                        />
+                      </div>
+                    </li>
+                  )
+                })}
               </ul>
             )}
+            {/* 今週の点数（夜の投稿のselfScore平均） */}
+            {weeklyAverageScore !== null && (
+              <div className={`flex items-center justify-between rounded-lg px-4 py-3 mb-2 ${isNight ? 'bg-[#1a1625]' : 'bg-[#f0e8eb]'}`}>
+                <span className={`text-sm ${theme.text}`}>今週の点数</span>
+                <span className={`text-2xl font-bold ${theme.accentText}`}>{weeklyAverageScore.toFixed(1)}<span className={`text-sm font-normal ${theme.textMuted}`}>/10</span></span>
+              </div>
+            )}
             {weeklyOKR.focus && (
-              <p className="text-sm text-[#d46a7e]">
+              <p className={`text-sm ${theme.accentText}`}>
                 Focus: {weeklyOKR.focus}
               </p>
             )}
@@ -251,18 +337,18 @@ export default function HomePage() {
 
         {/* コーチからのフィードバック */}
         {coachingNote && (coachingNote.redline || coachingNote.question) && (
-          <Card className="border-2 border-[#d46a7e]/30">
-            <CardTitle>コーチからのフィードバック</CardTitle>
+          <Card isNight={isNight} className={`border-2 ${theme.borderLight}`}>
+            <CardTitle isNight={isNight}>コーチからのフィードバック</CardTitle>
             {coachingNote.redline && (
               <div className="mb-4">
-                <p className="text-sm text-[#4a3f42]/60 mb-1">赤入れ</p>
-                <p className="text-[#d46a7e]">{coachingNote.redline}</p>
+                <p className={`text-sm mb-1 ${theme.textMuted}`}>赤入れ</p>
+                <p className={theme.accentText}>{coachingNote.redline}</p>
               </div>
             )}
             {coachingNote.question && (
               <div>
-                <p className="text-sm text-[#4a3f42]/60 mb-1">問い</p>
-                <p className="text-[#c25a6e]">{coachingNote.question}</p>
+                <p className={`text-sm mb-1 ${theme.textMuted}`}>問い</p>
+                <p className={isNight ? 'text-[#b88fd0]' : 'text-[#c25a6e]'}>{coachingNote.question}</p>
               </div>
             )}
           </Card>
@@ -270,15 +356,15 @@ export default function HomePage() {
 
         {/* タイムライン */}
         <div>
-          <h2 className="text-lg font-semibold text-[#4a3f42] mb-4">みんなの投稿</h2>
+          <h2 className={`text-lg font-semibold mb-4 ${theme.text}`}>みんなの投稿</h2>
 
           {loading ? (
-            <Card>
-              <div className="text-center text-[#4a3f42]/50">読み込み中...</div>
+            <Card isNight={isNight}>
+              <div className={`text-center ${theme.textFaint}`}>読み込み中...</div>
             </Card>
           ) : timeline.length === 0 ? (
-            <Card>
-              <div className="text-center text-[#4a3f42]/50">
+            <Card isNight={isNight}>
+              <div className={`text-center ${theme.textFaint}`}>
                 まだ投稿がありません
               </div>
             </Card>
@@ -289,11 +375,15 @@ export default function HomePage() {
                   key={item.id}
                   className={`rounded-2xl p-4 shadow-sm ${
                     item.type === 'morning'
-                      ? 'bg-gradient-to-br from-white to-[#fff5f7] border-l-4 border-[#d46a7e]'
+                      ? isNight
+                        ? 'bg-gradient-to-br from-[#3d2438] to-[#2d1828] text-white border-l-4 border-[#c9a0dc]'
+                        : 'bg-gradient-to-br from-white to-[#fff5f7] border-l-4 border-[#d46a7e]'
                       : item.type === 'night'
                       ? 'bg-gradient-to-br from-[#2d2438] to-[#1a1625] text-white border-l-4 border-[#9b7bb8]'
-                      : 'bg-gradient-to-br from-white to-blue-50 border-l-4 border-blue-400'
-                  } ${item.userId === session?.user?.id ? 'ring-2 ring-[#d46a7e]/30' : ''}`}
+                      : isNight
+                        ? 'bg-gradient-to-br from-[#2d3848] to-[#1a2535] text-white border-l-4 border-blue-400'
+                        : 'bg-gradient-to-br from-white to-blue-50 border-l-4 border-blue-400'
+                  } ${item.userId === session?.user?.id ? `ring-2 ${isNight ? 'ring-[#9b7bb8]/40' : 'ring-[#d46a7e]/30'}` : ''}`}
                 >
                   {/* ヘッダー */}
                   <div className="flex items-center gap-3 mb-3">
@@ -315,14 +405,14 @@ export default function HomePage() {
                     )}
                     <div className="flex-1">
                       <div className="flex items-center gap-2">
-                        <span className={`font-medium ${item.type === 'night' ? 'text-white' : 'text-[#4a3f42]'}`}>
+                        <span className={`font-medium ${item.type === 'night' || isNight ? 'text-white' : 'text-[#4a3f42]'}`}>
                           {item.userName}
                         </span>
                         {item.type === 'morning' && item.mood && (
                           <span className="text-lg">{MOOD_EMOJI[item.mood]}</span>
                         )}
                       </div>
-                      <div className={`flex items-center gap-2 text-xs ${item.type === 'night' ? 'text-white/60' : 'text-[#4a3f42]/50'}`}>
+                      <div className={`flex items-center gap-2 text-xs ${item.type === 'night' || isNight ? 'text-white/60' : 'text-[#4a3f42]/50'}`}>
                         <span className={
                           item.type === 'morning' ? 'text-[#d46a7e]' :
                           item.type === 'night' ? 'text-[#c9a0dc]' :
@@ -342,10 +432,10 @@ export default function HomePage() {
                   {item.type === 'morning' ? (
                     <div className="space-y-2">
                       {item.declaration && (
-                        <p className="text-[#4a3f42] font-medium">{item.declaration}</p>
+                        <p className={`font-medium ${isNight ? 'text-white' : 'text-[#4a3f42]'}`}>{item.declaration}</p>
                       )}
                       {(item.value || item.action || item.letGo) && (
-                        <div className="text-sm text-[#4a3f42]/70 space-y-1 pl-2 border-l-2 border-[#d46a7e]/30">
+                        <div className={`text-sm space-y-1 pl-2 border-l-2 ${isNight ? 'text-white/70 border-[#c9a0dc]/30' : 'text-[#4a3f42]/70 border-[#d46a7e]/30'}`}>
                           {item.value && <p>価値観: {item.value}</p>}
                           {item.action && <p>行動: {item.action}</p>}
                           {item.letGo && <p>手放す: {item.letGo}</p>}
@@ -381,24 +471,38 @@ export default function HomePage() {
                     </div>
                   ) : (
                     <div className="space-y-2">
-                      <div className="bg-blue-50 rounded-lg p-3">
-                        <p className="text-xs text-blue-600/70 mb-1">
+                      <div className={`rounded-lg p-3 ${isNight ? 'bg-blue-900/30' : 'bg-blue-50'}`}>
+                        <p className={`text-xs mb-1 ${isNight ? 'text-blue-300/70' : 'text-blue-600/70'}`}>
                           {item.okrType === 'weekly' ? '今週の目標' : '今月の目標'}
                         </p>
-                        <p className="text-[#4a3f42] font-medium">{item.objective}</p>
+                        <p className={`font-medium ${isNight ? 'text-white' : 'text-[#4a3f42]'}`}>{item.objective}</p>
                       </div>
                       {item.keyResults && item.keyResults.filter(kr => kr).length > 0 && (
-                        <ul className="text-sm text-[#4a3f42]/70 space-y-1 pl-2 border-l-2 border-blue-300">
-                          {item.keyResults.filter(kr => kr).map((kr, i) => (
-                            <li key={i}>• {kr}</li>
-                          ))}
+                        <ul className={`text-sm space-y-2 pl-2 border-l-2 ${isNight ? 'text-white/70 border-blue-400/50' : 'text-[#4a3f42]/70 border-blue-300'}`}>
+                          {item.keyResults.filter(kr => kr).map((kr, i) => {
+                            const progress = item.keyResultsProgress?.[i] || 0
+                            return (
+                              <li key={i} className="space-y-1">
+                                <div className="flex items-center justify-between">
+                                  <span>• {kr}</span>
+                                  <span className={`font-medium ${isNight ? 'text-blue-300' : 'text-blue-600'}`}>{progress}%</span>
+                                </div>
+                                <div className={`h-1.5 rounded-full overflow-hidden ml-3 ${isNight ? 'bg-blue-900/50' : 'bg-blue-100'}`}>
+                                  <div
+                                    className={`h-full rounded-full transition-all duration-300 ${isNight ? 'bg-blue-400' : 'bg-blue-500'}`}
+                                    style={{ width: `${progress}%` }}
+                                  />
+                                </div>
+                              </li>
+                            )
+                          })}
                         </ul>
                       )}
                       {item.focus && (
-                        <p className="text-sm text-blue-600">Focus: {item.focus}</p>
+                        <p className={`text-sm ${isNight ? 'text-blue-300' : 'text-blue-600'}`}>Focus: {item.focus}</p>
                       )}
                       {item.identityFocus && (
-                        <p className="text-sm text-blue-600">Identity: {item.identityFocus}</p>
+                        <p className={`text-sm ${isNight ? 'text-blue-300' : 'text-blue-600'}`}>Identity: {item.identityFocus}</p>
                       )}
                     </div>
                   )}
@@ -418,8 +522,7 @@ export default function HomePage() {
                         <div className="flex items-center gap-3">
                           <button
                             onClick={() => handleCheer(item.id, item.type)}
-                            disabled={cheeringPost === item.id}
-                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm transition disabled:opacity-50 active:scale-95 ${
+                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm transition-all active:scale-90 ${
                               item.type === 'night'
                                 ? 'bg-white/10 text-white/70 hover:bg-pink-500/30 hover:text-pink-200'
                                 : 'bg-gray-100 text-gray-600 hover:bg-pink-100 hover:text-pink-600'
