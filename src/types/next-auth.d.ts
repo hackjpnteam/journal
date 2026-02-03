@@ -5,6 +5,7 @@ declare module 'next-auth' {
     id: string
     email: string
     name: string
+    image?: string | null
     role: 'member' | 'coach' | 'superadmin'
     onboardingCompleted: boolean
   }
@@ -14,6 +15,7 @@ declare module 'next-auth' {
       id: string
       email: string
       name: string
+      image?: string | null
       role: 'member' | 'coach' | 'superadmin'
       onboardingCompleted: boolean
     }
