@@ -8,6 +8,8 @@ export interface IUser extends Document {
   profileImage?: string
   role: 'member' | 'coach' | 'superadmin'
   onboardingCompleted: boolean
+  resetToken?: string
+  resetTokenExpiry?: Date
   createdAt: Date
 }
 
@@ -18,6 +20,8 @@ const UserSchema = new Schema<IUser>({
   profileImage: { type: String },
   role: { type: String, enum: ['member', 'coach', 'superadmin'], default: 'member' },
   onboardingCompleted: { type: Boolean, default: false },
+  resetToken: { type: String },
+  resetTokenExpiry: { type: Date },
   createdAt: { type: Date, default: Date.now },
 })
 

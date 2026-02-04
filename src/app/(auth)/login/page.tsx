@@ -3,6 +3,7 @@
 import { useState, useEffect, Suspense } from 'react'
 import { signIn } from 'next-auth/react'
 import { useRouter, useSearchParams } from 'next/navigation'
+import Link from 'next/link'
 import { useTimeTheme, themeColors } from '@/hooks/useTimeTheme'
 
 function LoginForm() {
@@ -159,6 +160,17 @@ function LoginForm() {
             >
               {loading ? '処理中...' : isRegister ? '登録する' : 'ログイン'}
             </button>
+
+            {!isRegister && (
+              <div className="text-center mt-4">
+                <Link
+                  href="/forgot-password"
+                  className={`text-sm ${theme.textMuted} hover:underline`}
+                >
+                  パスワードをお忘れですか？
+                </Link>
+              </div>
+            )}
           </form>
         </div>
       </div>
