@@ -4,6 +4,28 @@ import { authOptions } from '@/lib/auth'
 import { connectDB } from '@/lib/db'
 import { User } from '@/models/User'
 import { DailyShare } from '@/models/DailyShare'
+import { TreeWater } from '@/models/TreeWater'
+import mongoose from 'mongoose'
+
+// JST基準で今日の開始時刻を取得
+function getTodayStartJST(): Date {
+  const now = new Date()
+  const jstOffset = 9 * 60 * 60 * 1000
+  const jstNow = new Date(now.getTime() + jstOffset)
+  const jstDate = new Date(jstNow.getFullYear(), jstNow.getMonth(), jstNow.getDate())
+  return new Date(jstDate.getTime() - jstOffset)
+}
+
+// JST基準で今週の月曜日の開始時刻を取得
+function getWeekStartJST(): Date {
+  const now = new Date()
+  const jstOffset = 9 * 60 * 60 * 1000
+  const jstNow = new Date(now.getTime() + jstOffset)
+  const day = jstNow.getDay()
+  const diffToMonday = day === 0 ? 6 : day - 1
+  const monday = new Date(jstNow.getFullYear(), jstNow.getMonth(), jstNow.getDate() - diffToMonday)
+  return new Date(monday.getTime() - jstOffset)
+}
 
 export async function GET() {
   try {
@@ -45,16 +67,74 @@ export async function GET() {
 
     const postCountMap = new Map(posts.map(p => [p._id.toString(), p.count]))
 
+    // 水やりデータを取得
+    const todayStart = getTodayStartJST()
+    const weekStart = getWeekStartJST()
+
+    // 今日の水やり数（ターゲットごと）
+    const todayWaters = await TreeWater.aggregate([
+      {
+        $match: {
+          targetUserId: { $in: userIds },
+          createdAt: { $gte: todayStart },
+        },
+      },
+      {
+        $group: {
+          _id: '$targetUserId',
+          count: { $sum: 1 },
+        },
+      },
+    ])
+    const todayWaterMap = new Map(todayWaters.map(w => [w._id.toString(), w.count]))
+
+    // 今週の水やり数（ターゲットごと）
+    const weeklyWaters = await TreeWater.aggregate([
+      {
+        $match: {
+          targetUserId: { $in: userIds },
+          createdAt: { $gte: weekStart },
+        },
+      },
+      {
+        $group: {
+          _id: '$targetUserId',
+          count: { $sum: 1 },
+        },
+      },
+    ])
+    const weeklyWaterMap = new Map(weeklyWaters.map(w => [w._id.toString(), w.count]))
+
+    // MVP（今週最多水やりを受けたユーザー）
+    let mvpUserId: string | null = null
+    let maxWeeklyWater = 0
+    for (const [userId, count] of weeklyWaterMap) {
+      if (count > maxWeeklyWater) {
+        maxWeeklyWater = count
+        mvpUserId = userId
+      }
+    }
+
+    // 自分が今日水やりした相手
+    const myWatersToday = await TreeWater.find({
+      fromUserId: new mongoose.Types.ObjectId(session.user.id),
+      createdAt: { $gte: todayStart },
+    }).select('targetUserId').lean()
+    const wateredByMeToday = myWatersToday.map(w => w.targetUserId.toString())
+
     // ユーザーごとの木の状態を計算
     const forest = users.map(user => {
-      const postCount = postCountMap.get(user._id.toString()) || 0
+      const uid = user._id.toString()
+      const postCount = postCountMap.get(uid) || 0
       const progress = Math.round((postCount / daysInMonth) * 100)
       return {
-        userId: user._id.toString(),
+        userId: uid,
         name: user.name,
         profileImage: user.profileImage || null,
         postCount,
         progress: Math.min(progress, 100),
+        waterCount: todayWaterMap.get(uid) || 0,
+        weeklyWaterCount: weeklyWaterMap.get(uid) || 0,
       }
     })
 
@@ -65,6 +145,8 @@ export async function GET() {
       forest,
       daysInMonth,
       currentDay: now.getDate(),
+      mvpUserId: maxWeeklyWater > 0 ? mvpUserId : null,
+      wateredByMeToday,
     })
   } catch (error) {
     console.error('Get forest error:', error)

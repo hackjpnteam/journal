@@ -32,6 +32,8 @@ interface TimelineItem {
   value?: string
   action?: string
   letGo?: string
+  promptQuestion?: string
+  promptAnswer?: string
   // Night fields
   proudChoice?: string
   learning?: string
@@ -65,9 +67,23 @@ interface ForestUser {
   profileImage: string | null
   postCount: number
   progress: number
+  waterCount?: number
+  weeklyWaterCount?: number
 }
 
 type WeatherType = 'clear' | 'partly_cloudy' | 'cloudy' | 'rain' | 'drizzle' | 'snow' | 'thunderstorm' | 'fog'
+
+const WEATHER_LABELS: Record<WeatherType, { icon: string; label: string }> = {
+  clear: { icon: '☀️', label: '晴れ' },
+  partly_cloudy: { icon: '⛅', label: '晴れ時々曇り' },
+  cloudy: { icon: '☁️', label: '曇り' },
+  rain: { icon: '🌧️', label: '雨' },
+  drizzle: { icon: '🌦️', label: '小雨' },
+  snow: { icon: '❄️', label: '雪' },
+  thunderstorm: { icon: '⛈️', label: '雷雨' },
+  fog: { icon: '🌫️', label: '霧' },
+}
+
 
 export default function HomePage() {
   const { data: session, status } = useSession()
@@ -79,8 +95,15 @@ export default function HomePage() {
   const [weeklyOKR, setWeeklyOKR] = useState<OKRData | null>(null)
   const [weeklyAverageScore, setWeeklyAverageScore] = useState<number | null>(null)
   const [forest, setForest] = useState<ForestUser[]>([])
+  const [mvpUserId, setMvpUserId] = useState<string | null>(null)
+  const [wateredByMeToday, setWateredByMeToday] = useState<string[]>([])
   const [weather, setWeather] = useState<WeatherType>('clear')
   const [weatherLocation, setWeatherLocation] = useState<string>('')
+  const [weatherTemp, setWeatherTemp] = useState<number | null>(null)
+  const [weatherTempMin, setWeatherTempMin] = useState<number | null>(null)
+  const [weatherTempMax, setWeatherTempMax] = useState<number | null>(null)
+  const [weatherDescription, setWeatherDescription] = useState<string>('')
+  const [birthdays, setBirthdays] = useState<{ name: string; description: string; quote?: string; prompt?: string }[]>([])
   const [loading, setLoading] = useState(true)
   const [deleting, setDeleting] = useState<string | null>(null)
   const [userName, setUserName] = useState<string>('')
@@ -144,6 +167,8 @@ export default function HomePage() {
         if (forestRes.ok) {
           const forestData = await forestRes.json()
           setForest(forestData.forest || [])
+          setMvpUserId(forestData.mvpUserId || null)
+          setWateredByMeToday(forestData.wateredByMeToday || [])
         }
 
         // ユーザーの地域の天気を取得
@@ -152,6 +177,17 @@ export default function HomePage() {
           const weatherData = await weatherRes.json()
           setWeather(weatherData.weather || 'clear')
           setWeatherLocation(weatherData.location || '')
+          setWeatherTemp(weatherData.temp)
+          setWeatherTempMin(weatherData.tempMin)
+          setWeatherTempMax(weatherData.tempMax)
+          setWeatherDescription(weatherData.description || '')
+        }
+
+        // 今日の有名人の誕生日を取得
+        const todayRes = await fetch('/api/today')
+        if (todayRes.ok) {
+          const todayData = await todayRes.json()
+          setBirthdays(todayData.birthdays || [])
         }
       } catch (error) {
         console.error('Failed to fetch data:', error)
@@ -214,6 +250,42 @@ export default function HomePage() {
     })
   }
 
+  const handleWaterTree = async (targetUserId: string) => {
+    if (!session?.user) return
+
+    // 楽観的更新
+    setWateredByMeToday(prev => [...prev, targetUserId])
+    setForest(prev =>
+      prev.map(u =>
+        u.userId === targetUserId
+          ? { ...u, waterCount: (u.waterCount || 0) + 1, weeklyWaterCount: (u.weeklyWaterCount || 0) + 1 }
+          : u
+      )
+    )
+
+    try {
+      const res = await fetch('/api/forest/water', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ targetUserId }),
+      })
+      if (!res.ok) {
+        // ロールバック
+        setWateredByMeToday(prev => prev.filter(id => id !== targetUserId))
+        setForest(prev =>
+          prev.map(u =>
+            u.userId === targetUserId
+              ? { ...u, waterCount: (u.waterCount || 1) - 1, weeklyWaterCount: (u.weeklyWaterCount || 1) - 1 }
+              : u
+          )
+        )
+      }
+    } catch {
+      // ロールバック
+      setWateredByMeToday(prev => prev.filter(id => id !== targetUserId))
+    }
+  }
+
   const getGreeting = () => {
     if (currentHour < 12) return 'おはようございます'
     if (currentHour < 18) return 'こんにちは'
@@ -245,6 +317,61 @@ export default function HomePage() {
           <h1 className={`text-xl font-semibold mt-1 ${theme.text}`}>
             {getGreeting()}、{userName || session?.user?.name}さん
           </h1>
+
+          {/* 天気・気温・誕生日 */}
+          {(weatherLocation || birthdays.length > 0) && (
+            <div className={`mt-3 rounded-xl px-4 py-3 text-left ${isNight ? 'bg-[#2d2438]/60' : 'bg-white/60'}`}>
+              {weatherLocation && (
+                <div>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <span className={`text-xs ${theme.textMuted}`}>
+                        📍 {weatherLocation}
+                      </span>
+                      {weatherTemp != null && (
+                        <span className={`text-lg font-bold ${theme.text}`}>
+                          {weatherTemp}°C
+                        </span>
+                      )}
+                    </div>
+                    {weatherTempMin != null && weatherTempMax != null && (
+                      <span className={`text-xs ${theme.textFaint}`}>
+                        {weatherTempMin}° / {weatherTempMax}°
+                      </span>
+                    )}
+                  </div>
+                  <p className={`text-xs mt-1 ${theme.textMuted}`}>
+                    {WEATHER_LABELS[weather].icon} {WEATHER_LABELS[weather].label}
+                    {weatherDescription && `（${weatherDescription}）`}
+                  </p>
+                </div>
+              )}
+              {birthdays.length > 0 && (
+                <div className={`${weatherLocation ? 'mt-2 pt-2 border-t' : ''} ${isNight ? 'border-white/10' : 'border-black/5'}`}>
+                  <p className={`text-xs ${theme.textMuted}`}>
+                    🎂 <span className={`font-medium ${theme.text}`}>{birthdays[0].name}</span>（{birthdays[0].description}）の誕生日
+                  </p>
+                  {birthdays[0].quote && (
+                    <p className={`text-xs mt-1 italic ${theme.accentText}`}>
+                      「{birthdays[0].quote}」
+                    </p>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* 今日のお題 */}
+          {birthdays.length > 0 && birthdays[0].prompt && (
+            <div className={`mt-3 rounded-xl px-4 py-3 text-left ${isNight ? 'bg-gradient-to-r from-[#2d2438]/80 to-[#1a1a2e]/80' : 'bg-gradient-to-r from-amber-50/80 to-orange-50/80'}`}>
+              <p className={`text-xs font-bold ${isNight ? 'text-amber-300' : 'text-amber-600'} mb-1`}>
+                💬 今日のお題
+              </p>
+              <p className={`text-sm leading-relaxed ${theme.text}`}>
+                {birthdays[0].prompt}
+              </p>
+            </div>
+          )}
         </div>
 
         {/* アクションボタン */}
@@ -282,6 +409,9 @@ export default function HomePage() {
               currentUserId={session?.user?.id}
               weather={weather}
               isNight={isNight}
+              mvpUserId={mvpUserId}
+              wateredByMeToday={wateredByMeToday}
+              onWaterTree={handleWaterTree}
             />
           </Card>
         )}
@@ -433,6 +563,12 @@ export default function HomePage() {
                     <div className="space-y-2">
                       {item.declaration && (
                         <p className={`font-medium ${isNight ? 'text-white' : 'text-[#4a3f42]'}`}>{item.declaration}</p>
+                      )}
+                      {item.promptQuestion && item.promptAnswer && (
+                        <div className={`rounded-lg p-2.5 ${isNight ? 'bg-amber-900/20' : 'bg-amber-50/80'}`}>
+                          <p className={`text-xs ${isNight ? 'text-amber-300/70' : 'text-amber-600/70'}`}>💬 {item.promptQuestion}</p>
+                          <p className={`text-sm mt-1 ${isNight ? 'text-white/90' : 'text-[#4a3f42]'}`}>{item.promptAnswer}</p>
+                        </div>
                       )}
                       {(item.value || item.action || item.letGo) && (
                         <div className={`text-sm space-y-1 pl-2 border-l-2 ${isNight ? 'text-white/70 border-[#c9a0dc]/30' : 'text-[#4a3f42]/70 border-[#d46a7e]/30'}`}>
