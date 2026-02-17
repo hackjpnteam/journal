@@ -4,7 +4,11 @@ import { Resend } from 'resend'
 import { connectDB } from '@/lib/db'
 import { User } from '@/models/User'
 
-const resend = new Resend(process.env.RESEND_API_KEY)
+function getResend() {
+  const key = process.env.RESEND_API_KEY
+  if (!key) throw new Error('RESEND_API_KEY is not set')
+  return new Resend(key)
+}
 
 export async function POST(req: NextRequest) {
   try {
@@ -48,7 +52,7 @@ export async function POST(req: NextRequest) {
     // メール送信
     const emailFrom = process.env.EMAIL_FROM || 'onboarding@resend.dev'
 
-    await resend.emails.send({
+    await getResend().emails.send({
       from: emailFrom,
       to: email,
       subject: '【究極の朝活】パスワードリセットのご案内',
