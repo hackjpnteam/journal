@@ -98,8 +98,24 @@ export default function HomePage() {
   const [coachingNote, setCoachingNote] = useState<CoachingNote | null>(null)
   const [weeklyOKR, setWeeklyOKR] = useState<OKRData | null>(null)
   const [weeklyAverageScore, setWeeklyAverageScore] = useState<number | null>(null)
-  const [forest, setForest] = useState<ForestUser[]>([])
-  const [mvpUserId, setMvpUserId] = useState<string | null>(null)
+  const [forest, setForest] = useState<ForestUser[]>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const cached = localStorage.getItem('forest-cache')
+        if (cached) return JSON.parse(cached).forest || []
+      } catch {}
+    }
+    return []
+  })
+  const [mvpUserId, setMvpUserId] = useState<string | null>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const cached = localStorage.getItem('forest-cache')
+        if (cached) return JSON.parse(cached).mvpUserId || null
+      } catch {}
+    }
+    return null
+  })
   const [wateredByMeToday, setWateredByMeToday] = useState<string[]>([])
   const [weather, setWeather] = useState<WeatherType>('clear')
   const [weatherLocation, setWeatherLocation] = useState<string>('')
@@ -175,6 +191,7 @@ export default function HomePage() {
           setForest(d.forest || [])
           setMvpUserId(d.mvpUserId || null)
           setWateredByMeToday(d.wateredByMeToday || [])
+          try { localStorage.setItem('forest-cache', JSON.stringify({ forest: d.forest, mvpUserId: d.mvpUserId })) } catch {}
         }
       })
       .catch(() => {})
