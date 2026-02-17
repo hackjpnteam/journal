@@ -11,6 +11,9 @@ interface ForestUser {
   waterCount?: number
   weeklyWaterCount?: number
   waterBonus?: number
+  witherPenalty?: number
+  daysSinceActivity?: number
+  wateredBy?: { userId: string; name: string }[]
 }
 
 interface ForestProps {
@@ -226,7 +229,8 @@ export function Forest({ users, currentUserId, weather = 'clear', isNight = fals
   }, [isExpanded, handleKeyDown, startAmbientSound, stopAmbientSound])
 
   // 0%のユーザーは非表示
-  const activeUsers = users.filter(u => u.progress > 0)
+  // 投稿したことがある or 水やりされたことがあるユーザーを表示（枯れた木も表示）
+  const activeUsers = users.filter(u => u.postCount > 0 || (u.waterCount || 0) > 0 || (u.weeklyWaterCount || 0) > 0)
 
   // 木の位置を計算（ユーザーIDに基づいてランダムだが固定）
   const treePositions = useMemo(() => {
@@ -704,6 +708,18 @@ export function Forest({ users, currentUserId, weather = 'clear', isNight = fals
                   </g>
                 )}
 
+                {/* 枯れた木（progress <= 0） */}
+                {progress <= 0 && (
+                  <g opacity={0.6}>
+                    <line x1="0" y1="0" x2="0" y2="-20" stroke="#8d6e63" strokeWidth="3" />
+                    <line x1="0" y1="-12" x2="-8" y2="-18" stroke="#8d6e63" strokeWidth="2" strokeLinecap="round" />
+                    <line x1="0" y1="-15" x2="7" y2="-22" stroke="#8d6e63" strokeWidth="2" strokeLinecap="round" />
+                    {/* 落ち葉 */}
+                    <ellipse cx="-5" cy="3" rx="3" ry="1.5" fill="#a1887f" opacity="0.5" transform="rotate(-15 -5 3)" />
+                    <ellipse cx="4" cy="4" rx="2.5" ry="1.2" fill="#bcaaa4" opacity="0.4" transform="rotate(20 4 4)" />
+                  </g>
+                )}
+
                 {progress > 0 && progress < 20 && (
                   <g>
                     <line x1="0" y1="0" x2="0" y2="-8" stroke="#6d4c41" strokeWidth="2" />
@@ -1010,6 +1026,14 @@ export function Forest({ users, currentUserId, weather = 'clear', isNight = fals
                 )}
                 {(hoveredUser.waterBonus || 0) > 0 && (
                   <p className="text-green-200">🌱 水やりボーナス: +{hoveredUser.waterBonus}%</p>
+                )}
+                {(hoveredUser.witherPenalty || 0) > 0 && (
+                  <p className="text-orange-300">🍂 {hoveredUser.daysSinceActivity}日放置 (-{hoveredUser.witherPenalty}%)</p>
+                )}
+                {hoveredUser.wateredBy && hoveredUser.wateredBy.length > 0 && (
+                  <p className="text-cyan-200 text-xs mt-1">
+                    💧 {hoveredUser.wateredBy.map(w => w.name).join(', ')}
+                  </p>
                 )}
                 {hoveredUser.userId !== currentUserId && !wateredByMeToday.includes(hoveredUser.userId) && (
                   <p className="text-cyan-200 mt-1 text-xs">タップして水やり 💧</p>

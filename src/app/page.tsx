@@ -70,6 +70,9 @@ interface ForestUser {
   waterCount?: number
   weeklyWaterCount?: number
   waterBonus?: number
+  witherPenalty?: number
+  daysSinceActivity?: number
+  wateredBy?: { userId: string; name: string }[]
 }
 
 type WeatherType = 'clear' | 'partly_cloudy' | 'cloudy' | 'rain' | 'drizzle' | 'snow' | 'thunderstorm' | 'fog'
