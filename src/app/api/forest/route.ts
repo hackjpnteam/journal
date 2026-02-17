@@ -122,13 +122,27 @@ export async function GET() {
     ])
     const weeklyWaterMap = new Map(weeklyWaters.map(w => [w._id.toString(), w.count]))
 
-    // MVP（今週最多水やりを受けたユーザー）
+    // MVP（今週一番多く他人に水やりした人＝貢献者）
+    const weeklyGivers = await TreeWater.aggregate([
+      {
+        $match: {
+          fromUserId: { $in: userIds },
+          createdAt: { $gte: weekStart },
+        },
+      },
+      {
+        $group: {
+          _id: '$fromUserId',
+          count: { $sum: 1 },
+        },
+      },
+    ])
     let mvpUserId: string | null = null
-    let maxWeeklyWater = 0
-    for (const [userId, count] of weeklyWaterMap) {
-      if (count > maxWeeklyWater) {
-        maxWeeklyWater = count
-        mvpUserId = userId
+    let maxGiven = 0
+    for (const g of weeklyGivers) {
+      if (g.count > maxGiven) {
+        maxGiven = g.count
+        mvpUserId = g._id.toString()
       }
     }
 
@@ -166,7 +180,7 @@ export async function GET() {
       forest,
       daysInMonth,
       currentDay: now.getDate(),
-      mvpUserId: maxWeeklyWater > 0 ? mvpUserId : null,
+      mvpUserId: maxGiven > 0 ? mvpUserId : null,
       wateredByMeToday,
     })
   } catch (error) {

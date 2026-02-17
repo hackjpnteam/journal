@@ -985,7 +985,7 @@ export function Forest({ users, currentUserId, weather = 'clear', isNight = fals
           {/* MVPラベル */}
           {mvpUserId && (
             <div className="absolute top-4 left-4 bg-yellow-500/90 text-white text-sm font-bold px-4 py-2 rounded-full shadow-lg z-10 animate-pulse">
-              🏆 今週のMVPツリー
+              🏆 今週の水やり王
             </div>
           )}
 
