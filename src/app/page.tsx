@@ -104,7 +104,7 @@ export default function HomePage() {
   const [weatherTempMax, setWeatherTempMax] = useState<number | null>(null)
   const [weatherDescription, setWeatherDescription] = useState<string>('')
   const [birthdays, setBirthdays] = useState<{ name: string; description: string; quote?: string; prompt?: string }[]>([])
-  const [loading, setLoading] = useState(true)
+  const [timelineLoading, setTimelineLoading] = useState(true)
   const [deleting, setDeleting] = useState<string | null>(null)
   const [userName, setUserName] = useState<string>('')
 
@@ -112,92 +112,74 @@ export default function HomePage() {
   const currentHour = new Date().getHours()
 
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const now = new Date()
-        const year = now.getFullYear()
-        const weekNum = Math.ceil(
-          ((now.getTime() - new Date(year, 0, 1).getTime()) / 86400000 +
-            new Date(year, 0, 1).getDay() +
-            1) /
-            7
-        )
-        const weeklyPeriodKey = `${year}-W${String(weekNum).padStart(2, '0')}`
+    if (status !== 'authenticated' || !session?.user) return
 
-        // 全APIを並列で取得
-        const [
-          timelineRes,
-          shareRes,
-          okrRes,
-          profileRes,
-          nightRes,
-          forestRes,
-          weatherRes,
-          todayRes,
-        ] = await Promise.all([
-          fetch('/api/timeline'),
-          fetch('/api/share'),
-          fetch(`/api/okr?type=weekly&periodKey=${weeklyPeriodKey}`),
-          fetch('/api/profile'),
-          fetch('/api/night?weeklyAvg=true'),
-          fetch('/api/forest'),
-          fetch('/api/weather'),
-          fetch('/api/today'),
-        ])
+    const now = new Date()
+    const year = now.getFullYear()
+    const weekNum = Math.ceil(
+      ((now.getTime() - new Date(year, 0, 1).getTime()) / 86400000 +
+        new Date(year, 0, 1).getDay() +
+        1) /
+        7
+    )
+    const weeklyPeriodKey = `${year}-W${String(weekNum).padStart(2, '0')}`
 
-        if (timelineRes.ok) {
-          const timelineData = await timelineRes.json()
-          setTimeline(timelineData.timeline || [])
-        }
-        if (shareRes.ok) {
-          const shareData = await shareRes.json()
-          setCoachingNote(shareData.myCoachingNote)
-        }
-        if (okrRes.ok) {
-          const okrData = await okrRes.json()
-          if (okrData && okrData.objective) {
-            setWeeklyOKR(okrData)
-          }
-        }
-        if (profileRes.ok) {
-          const profileData = await profileRes.json()
-          setUserName(profileData.name || '')
-        }
-        if (nightRes.ok) {
-          const nightData = await nightRes.json()
-          if (nightData.weeklyAverageScore !== null) {
-            setWeeklyAverageScore(nightData.weeklyAverageScore)
-          }
-        }
-        if (forestRes.ok) {
-          const forestData = await forestRes.json()
-          setForest(forestData.forest || [])
-          setMvpUserId(forestData.mvpUserId || null)
-          setWateredByMeToday(forestData.wateredByMeToday || [])
-        }
-        if (weatherRes.ok) {
-          const weatherData = await weatherRes.json()
-          setWeather(weatherData.weather || 'clear')
-          setWeatherLocation(weatherData.location || '')
-          setWeatherTemp(weatherData.temp)
-          setWeatherTempMin(weatherData.tempMin)
-          setWeatherTempMax(weatherData.tempMax)
-          setWeatherDescription(weatherData.description || '')
-        }
-        if (todayRes.ok) {
-          const todayData = await todayRes.json()
-          setBirthdays(todayData.birthdays || [])
-        }
-      } catch (error) {
-        console.error('Failed to fetch data:', error)
-      } finally {
-        setLoading(false)
-      }
-    }
+    // 各APIを独立で取得（来た順に表示、遅いAPIに引きずられない）
+    fetch('/api/today')
+      .then(r => r.ok ? r.json() : null)
+      .then(d => { if (d) setBirthdays(d.birthdays || []) })
+      .catch(() => {})
 
-    if (status === 'authenticated' && session?.user) {
-      fetchData()
-    }
+    fetch('/api/profile')
+      .then(r => r.ok ? r.json() : null)
+      .then(d => { if (d) setUserName(d.name || '') })
+      .catch(() => {})
+
+    fetch('/api/weather')
+      .then(r => r.ok ? r.json() : null)
+      .then(d => {
+        if (d) {
+          setWeather(d.weather || 'clear')
+          setWeatherLocation(d.location || '')
+          setWeatherTemp(d.temp)
+          setWeatherTempMin(d.tempMin)
+          setWeatherTempMax(d.tempMax)
+          setWeatherDescription(d.description || '')
+        }
+      })
+      .catch(() => {})
+
+    fetch('/api/share')
+      .then(r => r.ok ? r.json() : null)
+      .then(d => { if (d) setCoachingNote(d.myCoachingNote) })
+      .catch(() => {})
+
+    fetch(`/api/okr?type=weekly&periodKey=${weeklyPeriodKey}`)
+      .then(r => r.ok ? r.json() : null)
+      .then(d => { if (d?.objective) setWeeklyOKR(d) })
+      .catch(() => {})
+
+    fetch('/api/night?weeklyAvg=true')
+      .then(r => r.ok ? r.json() : null)
+      .then(d => { if (d?.weeklyAverageScore !== null) setWeeklyAverageScore(d.weeklyAverageScore) })
+      .catch(() => {})
+
+    fetch('/api/forest')
+      .then(r => r.ok ? r.json() : null)
+      .then(d => {
+        if (d) {
+          setForest(d.forest || [])
+          setMvpUserId(d.mvpUserId || null)
+          setWateredByMeToday(d.wateredByMeToday || [])
+        }
+      })
+      .catch(() => {})
+
+    fetch('/api/timeline')
+      .then(r => r.ok ? r.json() : null)
+      .then(d => { if (d) setTimeline(d.timeline || []) })
+      .catch(() => {})
+      .finally(() => setTimelineLoading(false))
   }, [session, status])
 
   const handleDeletePost = async (postId: string, postType: string) => {
@@ -487,7 +469,7 @@ export default function HomePage() {
         <div>
           <h2 className={`text-lg font-semibold mb-4 ${theme.text}`}>みんなの投稿</h2>
 
-          {loading ? (
+          {timelineLoading ? (
             <Card isNight={isNight}>
               <div className={`text-center ${theme.textFaint}`}>読み込み中...</div>
             </Card>
