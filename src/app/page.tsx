@@ -114,21 +114,6 @@ export default function HomePage() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        // タイムラインを取得
-        const timelineRes = await fetch('/api/timeline')
-        if (timelineRes.ok) {
-          const timelineData = await timelineRes.json()
-          setTimeline(timelineData.timeline || [])
-        }
-
-        // コーチングノートを取得
-        const shareRes = await fetch('/api/share')
-        if (shareRes.ok) {
-          const shareData = await shareRes.json()
-          setCoachingNote(shareData.myCoachingNote)
-        }
-
-        // 今週のOKRを取得
         const now = new Date()
         const year = now.getFullYear()
         const weekNum = Math.ceil(
@@ -138,41 +123,58 @@ export default function HomePage() {
             7
         )
         const weeklyPeriodKey = `${year}-W${String(weekNum).padStart(2, '0')}`
-        const okrRes = await fetch(`/api/okr?type=weekly&periodKey=${weeklyPeriodKey}`)
+
+        // 全APIを並列で取得
+        const [
+          timelineRes,
+          shareRes,
+          okrRes,
+          profileRes,
+          nightRes,
+          forestRes,
+          weatherRes,
+          todayRes,
+        ] = await Promise.all([
+          fetch('/api/timeline'),
+          fetch('/api/share'),
+          fetch(`/api/okr?type=weekly&periodKey=${weeklyPeriodKey}`),
+          fetch('/api/profile'),
+          fetch('/api/night?weeklyAvg=true'),
+          fetch('/api/forest'),
+          fetch('/api/weather'),
+          fetch('/api/today'),
+        ])
+
+        if (timelineRes.ok) {
+          const timelineData = await timelineRes.json()
+          setTimeline(timelineData.timeline || [])
+        }
+        if (shareRes.ok) {
+          const shareData = await shareRes.json()
+          setCoachingNote(shareData.myCoachingNote)
+        }
         if (okrRes.ok) {
           const okrData = await okrRes.json()
           if (okrData && okrData.objective) {
             setWeeklyOKR(okrData)
           }
         }
-
-        // ユーザー名を最新の状態で取得
-        const profileRes = await fetch('/api/profile')
         if (profileRes.ok) {
           const profileData = await profileRes.json()
           setUserName(profileData.name || '')
         }
-
-        // 今週の夜の投稿の平均スコアを取得
-        const nightRes = await fetch('/api/night?weeklyAvg=true')
         if (nightRes.ok) {
           const nightData = await nightRes.json()
           if (nightData.weeklyAverageScore !== null) {
             setWeeklyAverageScore(nightData.weeklyAverageScore)
           }
         }
-
-        // みんなの木の状態を取得
-        const forestRes = await fetch('/api/forest')
         if (forestRes.ok) {
           const forestData = await forestRes.json()
           setForest(forestData.forest || [])
           setMvpUserId(forestData.mvpUserId || null)
           setWateredByMeToday(forestData.wateredByMeToday || [])
         }
-
-        // ユーザーの地域の天気を取得
-        const weatherRes = await fetch('/api/weather')
         if (weatherRes.ok) {
           const weatherData = await weatherRes.json()
           setWeather(weatherData.weather || 'clear')
@@ -182,9 +184,6 @@ export default function HomePage() {
           setWeatherTempMax(weatherData.tempMax)
           setWeatherDescription(weatherData.description || '')
         }
-
-        // 今日の有名人の誕生日を取得
-        const todayRes = await fetch('/api/today')
         if (todayRes.ok) {
           const todayData = await todayRes.json()
           setBirthdays(todayData.birthdays || [])
