@@ -1,29 +1,16 @@
+'use client'
+
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { connectDB } from '@/lib/db'
-import { User } from '@/models/User'
-import { DailyShare } from '@/models/DailyShare'
 import { FadeInSection, CountUp, AnimatedTree, GrowthTreeLP } from './LPClient'
 
-// 5分間キャッシュ
-export const revalidate = 300
-
-async function getLPStats() {
-  try {
-    await connectDB()
-    const totalUsers = await User.countDocuments({
-      email: { $not: /sample|test|example|demo/i },
-    })
-    const totalMorningPosts = await DailyShare.countDocuments()
-    const hoursSavedPerPost = 2
-    const totalHoursSaved = totalMorningPosts * hoursSavedPerPost
-    const totalDaysSaved = Math.round(totalHoursSaved / 24)
-    return { totalUsers, totalMorningPosts, totalHoursSaved, totalDaysSaved }
-  } catch {
-    return { totalUsers: 0, totalMorningPosts: 0, totalHoursSaved: 0, totalDaysSaved: 0 }
-  }
+interface LPStats {
+  totalUsers: number
+  totalMorningPosts: number
+  totalHoursSaved: number
+  totalDaysSaved: number
 }
 
-// デフォルトはデイモード（サーバー側では時刻判定しない、CSSで対応）
 const colors = {
   bg: 'bg-[#f0e8eb]',
   bgAlt: 'bg-[#fff5f7]',
@@ -40,21 +27,15 @@ const colors = {
   cardBg: 'bg-white',
 }
 
-// ナイトモード用CSS（body.night-mode で切り替え）
-const nightColors = {
-  bg: 'night-mode:bg-[#1a1625]',
-  bgAlt: 'night-mode:bg-[#241e30]',
-  header: 'night-mode:bg-[#2d2438]',
-  text: 'night-mode:text-white',
-  textMuted: 'night-mode:text-white/80',
-  accentText: 'night-mode:text-[#c9a0dc]',
-  accentBg: 'night-mode:bg-[#9b7bb8]',
-  greenText: 'night-mode:text-[#8fbf8f]',
-  cardBg: 'night-mode:bg-[#2d2438]',
-}
+export default function LandingPage() {
+  const [stats, setStats] = useState<LPStats | null>(null)
 
-export default async function LandingPage() {
-  const stats = await getLPStats()
+  useEffect(() => {
+    fetch('/api/lp-stats')
+      .then(res => res.ok ? res.json() : null)
+      .then(data => { if (data) setStats(data) })
+      .catch(() => {})
+  }, [])
 
   return (
     <div className={`min-h-screen transition-colors duration-500 ${colors.bg} ${colors.text}`}>
@@ -109,7 +90,7 @@ export default async function LandingPage() {
       </section>
 
       {/* 統計セクション */}
-      {(stats.totalUsers > 0 || stats.totalMorningPosts > 0) && (
+      {stats && (stats.totalUsers > 0 || stats.totalMorningPosts > 0) && (
         <section className={`py-20 px-6 ${colors.bgAlt}`}>
           <div className="max-w-4xl mx-auto">
             <FadeInSection>
@@ -195,7 +176,6 @@ export default async function LandingPage() {
           </FadeInSection>
 
           <div className="space-y-16">
-            {/* 機能1: 朝の投稿 */}
             <FadeInSection delay={100}>
               <div className={`${colors.cardBg} rounded-3xl p-8 md:p-12 shadow-sm`}>
                 <div className="flex flex-col md:flex-row items-center gap-8">
@@ -220,7 +200,6 @@ export default async function LandingPage() {
               </div>
             </FadeInSection>
 
-            {/* 機能2: 夜の投稿 */}
             <FadeInSection delay={200}>
               <div className={`${colors.cardBg} rounded-3xl p-8 md:p-12 shadow-sm`}>
                 <div className="flex flex-col md:flex-row-reverse items-center gap-8">
@@ -245,7 +224,6 @@ export default async function LandingPage() {
               </div>
             </FadeInSection>
 
-            {/* 機能3: 成長の可視化 */}
             <FadeInSection delay={300}>
               <div className={`${colors.cardBg} rounded-3xl p-8 md:p-12 shadow-sm`}>
                 <div className="flex flex-col md:flex-row items-center gap-8">
@@ -283,7 +261,6 @@ export default async function LandingPage() {
               </div>
             </FadeInSection>
 
-            {/* 機能4: OKR */}
             <FadeInSection delay={400}>
               <div className={`${colors.cardBg} rounded-3xl p-8 md:p-12 shadow-sm`}>
                 <div className="flex flex-col md:flex-row-reverse items-center gap-8">
