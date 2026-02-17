@@ -543,7 +543,7 @@ export function Forest({ users, currentUserId, weather = 'clear', isNight = fals
     const scaleY = h / svgHeight
 
     return (
-      <svg width="100%" height={expanded ? '100%' : undefined} viewBox={`0 0 ${w} ${h}`} preserveAspectRatio={expanded ? 'xMidYMid slice' : undefined} className={`overflow-hidden ${expanded ? '' : 'rounded-xl'}`}>
+      <svg width="100%" height={expanded ? '100%' : undefined} viewBox={`0 0 ${w} ${h}`} preserveAspectRatio={expanded ? 'xMidYMid meet' : undefined} className={`overflow-hidden ${expanded ? '' : 'rounded-xl'}`}>
         <defs>
           <linearGradient id={gradId} x1="0%" y1="0%" x2="0%" y2="100%">
             <stop offset="0%" stopColor={skyColors.top} />
@@ -933,9 +933,10 @@ export function Forest({ users, currentUserId, weather = 'clear', isNight = fals
       {isExpanded && (
         <div
           className="fixed inset-0 z-[100] flex flex-col animate-[fadeIn_0.3s_ease-out]"
+          style={{ backgroundColor: skyColors.bottom }}
         >
           {/* 森が画面全体を埋める */}
-          <div className="flex-1 relative">
+          <div className="flex-1 relative flex items-center justify-center overflow-auto">
             {forestSvg(true)}
 
             {/* コントロール（右上） */}
