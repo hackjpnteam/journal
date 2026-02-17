@@ -20,7 +20,14 @@ interface Share {
   action?: string
   letGo?: string
   declaration: string
+  promptQuestion?: string
+  promptAnswer?: string
   createdAt: string
+}
+
+interface TodayData {
+  birthdays: { name: string; description: string; quote?: string; prompt?: string }[]
+  date: string
 }
 
 // サンプル投稿データ
@@ -87,6 +94,8 @@ export default function SharePage() {
   const [action, setAction] = useState('')
   const [letGo, setLetGo] = useState('')
   const [declaration, setDeclaration] = useState('')
+  const [promptQuestion, setPromptQuestion] = useState('')
+  const [promptAnswer, setPromptAnswer] = useState('')
   const [hasPosted, setHasPosted] = useState(false)
   const [isEditing, setIsEditing] = useState(false)
   const [windowStatus, setWindowStatus] = useState<WindowStatus>('before')
@@ -119,6 +128,18 @@ export default function SharePage() {
   }, [])
 
   useEffect(() => {
+    // 今日のお題を取得
+    fetch('/api/today')
+      .then(res => res.ok ? res.json() : null)
+      .then((data: TodayData | null) => {
+        if (data?.birthdays?.[0]?.prompt) {
+          setPromptQuestion(data.birthdays[0].prompt)
+        }
+      })
+      .catch(() => {})
+  }, [])
+
+  useEffect(() => {
     const fetchData = async () => {
       try {
         const res = await fetch('/api/share')
@@ -137,6 +158,7 @@ export default function SharePage() {
             setAction(myShare.action || '')
             setLetGo(myShare.letGo || '')
             setDeclaration(myShare.declaration)
+            setPromptAnswer(myShare.promptAnswer || '')
           }
         }
       } catch (error) {
@@ -167,7 +189,9 @@ export default function SharePage() {
           value,
           action,
           letGo,
-          declaration
+          declaration,
+          promptQuestion: promptQuestion || undefined,
+          promptAnswer: promptAnswer || undefined,
         }),
       })
 
@@ -292,6 +316,29 @@ export default function SharePage() {
                 />
               </div>
 
+              {promptQuestion && (
+                <div className={`rounded-xl p-4 ${isNight ? 'bg-gradient-to-r from-[#2d2438]/80 to-[#1a1a2e]/80' : 'bg-gradient-to-r from-amber-50 to-orange-50'}`}>
+                  <p className={`text-xs font-bold mb-2 ${isNight ? 'text-amber-300' : 'text-amber-600'}`}>
+                    💬 今日のお題
+                  </p>
+                  <p className={`text-sm font-medium mb-3 ${theme.text}`}>
+                    {promptQuestion}
+                  </p>
+                  <textarea
+                    value={promptAnswer}
+                    onChange={(e) => setPromptAnswer(e.target.value)}
+                    placeholder="あなたの考えを共有しましょう..."
+                    disabled={!canPost && !isEditing}
+                    rows={2}
+                    className={`w-full rounded-lg px-3 py-2 text-sm resize-none ${
+                      isNight
+                        ? 'bg-[#1a1a2e]/60 text-white placeholder-white/30 border border-white/10'
+                        : 'bg-white/80 text-[#4a3f42] placeholder-[#4a3f42]/30 border border-amber-200'
+                    }`}
+                  />
+                </div>
+              )}
+
               <div className={`border-t pt-6 ${isNight ? 'border-[#9b7bb8]/20' : 'border-[#d46a7e]/20'}`}>
                 <label className={`block text-sm font-medium mb-1 ${theme.text}`}>
                   今日の宣言（1文）
@@ -366,6 +413,13 @@ export default function SharePage() {
                 <div>
                   <p className={`text-xs ${theme.textFaint}`}>手放すもの</p>
                   <p className={theme.text}>{letGo}</p>
+                </div>
+              )}
+
+              {promptQuestion && promptAnswer && (
+                <div className={`rounded-lg p-3 ${isNight ? 'bg-amber-900/20' : 'bg-amber-50'}`}>
+                  <p className={`text-xs ${isNight ? 'text-amber-300/70' : 'text-amber-600/70'}`}>💬 {promptQuestion}</p>
+                  <p className={`text-sm mt-1 ${theme.text}`}>{promptAnswer}</p>
                 </div>
               )}
 
@@ -452,6 +506,13 @@ export default function SharePage() {
                       {share.value && <p>価値観: {share.value}</p>}
                       {share.action && <p>行動: {share.action}</p>}
                       {share.letGo && <p>手放す: {share.letGo}</p>}
+                    </div>
+                  )}
+
+                  {share.promptQuestion && share.promptAnswer && (
+                    <div className={`ml-9 mb-2 rounded-lg p-2 ${isNight ? 'bg-amber-900/20' : 'bg-amber-50'}`}>
+                      <p className={`text-xs ${isNight ? 'text-amber-300/70' : 'text-amber-600/70'}`}>💬 {share.promptQuestion}</p>
+                      <p className={`text-sm mt-0.5 ${theme.text}`}>{share.promptAnswer}</p>
                     </div>
                   )}
 

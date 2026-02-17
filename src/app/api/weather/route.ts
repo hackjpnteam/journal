@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 
 // 天気をキャッシュ（IPごとに30分間）
-const weatherCache = new Map<string, { weather: string; location: string; timestamp: number }>()
+const weatherCache = new Map<string, { weather: string; location: string; temp: number | null; tempMin: number | null; tempMax: number | null; humidity: number | null; description: string; timestamp: number }>()
 const CACHE_DURATION = 30 * 60 * 1000 // 30分
 
 export async function GET(request: NextRequest) {
@@ -19,29 +19,21 @@ export async function GET(request: NextRequest) {
     // キャッシュがあり、有効期限内ならキャッシュを返す
     const cached = weatherCache.get(ip)
     if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
-      return NextResponse.json({ weather: cached.weather, location: cached.location })
+      return NextResponse.json({ weather: cached.weather, location: cached.location, temp: cached.temp, tempMin: cached.tempMin, tempMax: cached.tempMax, humidity: cached.humidity, description: cached.description })
     }
 
-    const apiKey = process.env.OPENWEATHERMAP_API_KEY
-
-    // APIキーがない場合はデフォルトで晴れを返す
-    if (!apiKey) {
-      return NextResponse.json({ weather: 'clear', location: '東京' })
-    }
-
-    let lat: number
-    let lon: number
+    let lat: number = 35.6762
+    let lon: number = 139.6503
     let locationName = '東京'
 
-    // ローカル開発時は東京の座標を使用
+    // IPから位置情報を取得（APIキーの有無に関わらず）
     if (ip === 'tokyo') {
       lat = 35.6762
       lon = 139.6503
     } else {
-      // IPから位置情報を取得（ip-api.comは無料で使用可能）
       try {
         const geoRes = await fetch(`http://ip-api.com/json/${ip}?fields=status,city,lat,lon`, {
-          next: { revalidate: 3600 } // 1時間キャッシュ
+          next: { revalidate: 3600 }
         })
 
         if (geoRes.ok) {
@@ -50,38 +42,40 @@ export async function GET(request: NextRequest) {
             lat = geoData.lat
             lon = geoData.lon
             locationName = geoData.city || '不明な地域'
-          } else {
-            // 位置情報取得失敗時は東京
-            lat = 35.6762
-            lon = 139.6503
           }
-        } else {
-          lat = 35.6762
-          lon = 139.6503
         }
       } catch {
-        // エラー時は東京
-        lat = 35.6762
-        lon = 139.6503
+        // エラー時は東京のまま
       }
+    }
+
+    const apiKey = process.env.OPENWEATHERMAP_API_KEY
+
+    // APIキーがない場合は位置情報のみ返す（気温なし）
+    if (!apiKey) {
+      weatherCache.set(ip, { weather: 'clear', location: locationName, temp: null, tempMin: null, tempMax: null, humidity: null, description: '', timestamp: Date.now() })
+      return NextResponse.json({ weather: 'clear', location: locationName, temp: null, tempMin: null, tempMax: null, humidity: null, description: '' })
     }
 
     // OpenWeatherMap APIで天気を取得
     const res = await fetch(
       `https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&appid=${apiKey}`,
-      { next: { revalidate: 1800 } } // 30分キャッシュ
+      { next: { revalidate: 1800 } }
     )
 
     if (!res.ok) {
       console.error('Weather API error:', res.status)
-      return NextResponse.json({ weather: 'clear', location: locationName })
+      return NextResponse.json({ weather: 'clear', location: locationName, temp: null, tempMin: null, tempMax: null, humidity: null, description: '' })
     }
 
     const data = await res.json()
     const weatherId = data.weather?.[0]?.id || 800
+    const weatherDescription = data.weather?.[0]?.description || ''
+    const temp = data.main?.temp ? Math.round(data.main.temp - 273.15) : null
+    const tempMin = data.main?.temp_min ? Math.round(data.main.temp_min - 273.15) : null
+    const tempMax = data.main?.temp_max ? Math.round(data.main.temp_max - 273.15) : null
+    const humidity = data.main?.humidity || null
 
-    // OpenWeatherMap の weather ID を天気タイプに変換
-    // https://openweathermap.org/weather-conditions
     let weather = 'clear'
     if (weatherId >= 200 && weatherId < 300) {
       weather = 'thunderstorm'
@@ -101,10 +95,9 @@ export async function GET(request: NextRequest) {
       weather = 'cloudy'
     }
 
-    // キャッシュを更新
-    weatherCache.set(ip, { weather, location: locationName, timestamp: Date.now() })
+    weatherCache.set(ip, { weather, location: locationName, temp, tempMin, tempMax, humidity, description: weatherDescription, timestamp: Date.now() })
 
-    return NextResponse.json({ weather, location: locationName })
+    return NextResponse.json({ weather, location: locationName, temp, tempMin, tempMax, humidity, description: weatherDescription })
   } catch (error) {
     console.error('Weather API error:', error)
     return NextResponse.json({ weather: 'clear', location: '東京' })

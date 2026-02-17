@@ -25,7 +25,7 @@ export async function GET() {
     const [morningPosts, nightPosts, sharedOKRs] = await Promise.all([
       // 朝の投稿
       DailyShare.find({ createdAt: { $gte: sevenDaysAgo } })
-        .select('userId mood declaration value action letGo createdAt')
+        .select('userId mood declaration value action letGo promptQuestion promptAnswer createdAt')
         .sort({ createdAt: -1 })
         .limit(30)
         .lean(),
@@ -116,6 +116,8 @@ export async function GET() {
           value: post.value,
           action: post.action,
           letGo: post.letGo,
+          promptQuestion: post.promptQuestion,
+          promptAnswer: post.promptAnswer,
           createdAt: post.createdAt,
           cheers: cheersMap.get(postId) || [],
         }

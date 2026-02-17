@@ -1,189 +1,60 @@
-'use client'
-
-import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { useTimeTheme } from '@/hooks/useTimeTheme'
+import { connectDB } from '@/lib/db'
+import { User } from '@/models/User'
+import { DailyShare } from '@/models/DailyShare'
+import { FadeInSection, CountUp, AnimatedTree, GrowthTreeLP } from './LPClient'
 
-// 統計データの型
-interface LPStats {
-  totalUsers: number
-  totalMorningPosts: number
-  totalHoursSaved: number
-  totalDaysSaved: number
+// 5分間キャッシュ
+export const revalidate = 300
+
+async function getLPStats() {
+  try {
+    await connectDB()
+    const totalUsers = await User.countDocuments({
+      email: { $not: /sample|test|example|demo/i },
+    })
+    const totalMorningPosts = await DailyShare.countDocuments()
+    const hoursSavedPerPost = 2
+    const totalHoursSaved = totalMorningPosts * hoursSavedPerPost
+    const totalDaysSaved = Math.round(totalHoursSaved / 24)
+    return { totalUsers, totalMorningPosts, totalHoursSaved, totalDaysSaved }
+  } catch {
+    return { totalUsers: 0, totalMorningPosts: 0, totalHoursSaved: 0, totalDaysSaved: 0 }
+  }
 }
 
-// 成長ステージの木を描画するコンポーネント
-function GrowthTreeLP({ stage, isNight }: { stage: number; isNight: boolean }) {
-  const leafColor = isNight ? '#3d5a40' : '#4F6F52'
-  const leafLight = isNight ? '#4a6a4d' : '#5a8055'
-  const leafLighter = isNight ? '#567058' : '#6a9060'
-
-  return (
-    <svg viewBox="0 0 200 300" className="w-full h-full">
-      <ellipse cx="100" cy="280" rx="60" ry="15" fill={leafColor} opacity="0.3" />
-      {stage === 0 && (
-        <g className="animate-pulse">
-          <line x1="100" y1="280" x2="100" y2="250" stroke={leafColor} strokeWidth="4" />
-          <ellipse cx="92" cy="245" rx="8" ry="15" fill={leafColor} transform="rotate(-20 92 245)" />
-          <ellipse cx="108" cy="245" rx="8" ry="15" fill={leafLight} transform="rotate(20 108 245)" />
-        </g>
-      )}
-      {stage === 1 && (
-        <g>
-          <rect x="95" y="200" width="10" height="80" fill="#5D4037" rx="2" />
-          <ellipse cx="100" cy="190" rx="30" ry="25" fill={leafColor} />
-          <ellipse cx="85" cy="200" rx="20" ry="15" fill={leafLight} />
-          <ellipse cx="115" cy="200" rx="20" ry="15" fill={leafLight} />
-        </g>
-      )}
-      {stage === 2 && (
-        <g>
-          <rect x="93" y="160" width="14" height="120" fill="#5D4037" rx="3" />
-          <line x1="100" y1="200" x2="70" y2="180" stroke="#5D4037" strokeWidth="6" strokeLinecap="round" />
-          <line x1="100" y1="200" x2="130" y2="175" stroke="#5D4037" strokeWidth="6" strokeLinecap="round" />
-          <ellipse cx="100" cy="140" rx="45" ry="40" fill={leafColor} />
-          <ellipse cx="70" cy="165" rx="25" ry="20" fill={leafLight} />
-          <ellipse cx="130" cy="160" rx="25" ry="20" fill={leafLight} />
-          <ellipse cx="100" cy="120" rx="30" ry="25" fill={leafLighter} />
-        </g>
-      )}
-      {stage === 3 && (
-        <g>
-          <rect x="92" y="140" width="16" height="140" fill="#5D4037" rx="3" />
-          <line x1="100" y1="190" x2="60" y2="160" stroke="#5D4037" strokeWidth="8" strokeLinecap="round" />
-          <line x1="100" y1="190" x2="140" y2="155" stroke="#5D4037" strokeWidth="8" strokeLinecap="round" />
-          <ellipse cx="100" cy="100" rx="55" ry="50" fill={leafColor} />
-          <ellipse cx="60" cy="140" rx="30" ry="25" fill={leafLight} />
-          <ellipse cx="140" cy="135" rx="30" ry="25" fill={leafLight} />
-          <ellipse cx="100" cy="70" rx="40" ry="35" fill={leafLighter} />
-          {[{ cx: 75, cy: 90 }, { cx: 125, cy: 85 }, { cx: 100, cy: 60 }, { cx: 60, cy: 120 }, { cx: 140, cy: 115 }].map((pos, i) => (
-            <g key={i}>
-              <circle cx={pos.cx} cy={pos.cy} r="8" fill={isNight ? '#e8c0c8' : '#fce4ec'} opacity="0.9">
-                <animate attributeName="r" values="7;9;7" dur={`${2 + i * 0.3}s`} repeatCount="indefinite" />
-              </circle>
-              <circle cx={pos.cx} cy={pos.cy} r="3" fill={isNight ? '#c9a0dc' : '#d46a7e'} />
-            </g>
-          ))}
-        </g>
-      )}
-      {stage === 4 && (
-        <g>
-          <rect x="90" y="120" width="20" height="160" fill="#5D4037" rx="4" />
-          <line x1="100" y1="180" x2="50" y2="140" stroke="#5D4037" strokeWidth="10" strokeLinecap="round" />
-          <line x1="100" y1="180" x2="150" y2="135" stroke="#5D4037" strokeWidth="10" strokeLinecap="round" />
-          <ellipse cx="100" cy="80" rx="65" ry="60" fill={leafColor} />
-          <ellipse cx="50" cy="120" rx="35" ry="30" fill={leafLight} />
-          <ellipse cx="150" cy="115" rx="35" ry="30" fill={leafLight} />
-          <ellipse cx="100" cy="45" rx="50" ry="40" fill={leafLighter} />
-          {[{ cx: 65, cy: 70 }, { cx: 135, cy: 65 }, { cx: 100, cy: 40 }, { cx: 50, cy: 100 }, { cx: 150, cy: 95 }, { cx: 80, cy: 110 }, { cx: 120, cy: 105 }].map((pos, i) => (
-            <g key={i}>
-              <circle cx={pos.cx} cy={pos.cy} r="12" fill="#c62828">
-                <animate attributeName="opacity" values="0.9;1;0.9" dur={`${2 + i * 0.2}s`} repeatCount="indefinite" />
-              </circle>
-              <ellipse cx={pos.cx - 3} cy={pos.cy - 4} rx="3" ry="2" fill="#ef5350" opacity="0.6" />
-            </g>
-          ))}
-          {[{ cx: 40, cy: 50 }, { cx: 160, cy: 45 }, { cx: 100, cy: 15 }].map((pos, i) => (
-            <circle key={`sparkle-${i}`} cx={pos.cx} cy={pos.cy} r="3" fill={isNight ? '#c9a0dc' : '#d46a7e'}>
-              <animate attributeName="opacity" values="0;1;0" dur={`${1.5 + i * 0.5}s`} repeatCount="indefinite" />
-              <animate attributeName="r" values="2;4;2" dur={`${1.5 + i * 0.5}s`} repeatCount="indefinite" />
-            </circle>
-          ))}
-        </g>
-      )}
-    </svg>
-  )
+// デフォルトはデイモード（サーバー側では時刻判定しない、CSSで対応）
+const colors = {
+  bg: 'bg-[#f0e8eb]',
+  bgAlt: 'bg-[#fff5f7]',
+  header: 'bg-[#c8848e]',
+  text: 'text-[#4a3f42]',
+  textMuted: 'text-[#4a3f42]/70',
+  textFaint: 'text-[#4a3f42]/50',
+  accent: '#d46a7e',
+  accentText: 'text-[#d46a7e]',
+  accentBg: 'bg-[#d46a7e]',
+  accentHover: 'hover:bg-[#c25a6e]',
+  border: 'border-[#d46a7e]/20',
+  greenText: 'text-[#4F6F52]',
+  cardBg: 'bg-white',
 }
 
-function FadeInSection({ children, delay = 0 }: { children: React.ReactNode; delay?: number }) {
-  const [isVisible, setIsVisible] = useState(false)
-  useEffect(() => {
-    const timer = setTimeout(() => setIsVisible(true), delay)
-    return () => clearTimeout(timer)
-  }, [delay])
-  return (
-    <div className={`transition-all duration-1000 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
-      {children}
-    </div>
-  )
+// ナイトモード用CSS（body.night-mode で切り替え）
+const nightColors = {
+  bg: 'night-mode:bg-[#1a1625]',
+  bgAlt: 'night-mode:bg-[#241e30]',
+  header: 'night-mode:bg-[#2d2438]',
+  text: 'night-mode:text-white',
+  textMuted: 'night-mode:text-white/80',
+  accentText: 'night-mode:text-[#c9a0dc]',
+  accentBg: 'night-mode:bg-[#9b7bb8]',
+  greenText: 'night-mode:text-[#8fbf8f]',
+  cardBg: 'night-mode:bg-[#2d2438]',
 }
 
-// 数字のカウントアップアニメーション
-function CountUp({ end, duration = 2000, suffix = '' }: { end: number; duration?: number; suffix?: string }) {
-  const [count, setCount] = useState(0)
-  useEffect(() => {
-    if (end === 0) return
-    let start = 0
-    const increment = end / (duration / 16)
-    const timer = setInterval(() => {
-      start += increment
-      if (start >= end) {
-        setCount(end)
-        clearInterval(timer)
-      } else {
-        setCount(Math.floor(start))
-      }
-    }, 16)
-    return () => clearInterval(timer)
-  }, [end, duration])
-  return <>{count.toLocaleString()}{suffix}</>
-}
-
-export default function LandingPage() {
-  const timeTheme = useTimeTheme()
-  const isNight = timeTheme === 'night'
-  const [currentStage, setCurrentStage] = useState(0)
-  const [stats, setStats] = useState<LPStats>({ totalUsers: 0, totalMorningPosts: 0, totalHoursSaved: 0, totalDaysSaved: 0 })
-
-  const colors = isNight
-    ? {
-        bg: 'bg-[#1a1625]',
-        bgGradient: 'from-[#1a1625] via-[#1f1a2e] to-[#1a1625]',
-        bgAlt: 'bg-[#241e30]',
-        header: 'bg-[#2d2438]',
-        text: 'text-white',
-        textMuted: 'text-white/80',
-        textFaint: 'text-white/60',
-        accent: '#c9a0dc',
-        accentText: 'text-[#c9a0dc]',
-        accentBg: 'bg-[#9b7bb8]',
-        accentHover: 'hover:bg-[#8a6aa7]',
-        border: 'border-[#9b7bb8]/30',
-        green: '#7a9a7d',
-        greenText: 'text-[#8fbf8f]',
-        cardBg: 'bg-[#2d2438]',
-        cardBgLight: 'bg-[#2d2438]/50',
-      }
-    : {
-        bg: 'bg-[#f0e8eb]',
-        bgGradient: 'from-[#f0e8eb] via-[#fff5f7] to-[#f0e8eb]',
-        bgAlt: 'bg-[#fff5f7]',
-        header: 'bg-[#c8848e]',
-        text: 'text-[#4a3f42]',
-        textMuted: 'text-[#4a3f42]/70',
-        textFaint: 'text-[#4a3f42]/50',
-        accent: '#d46a7e',
-        accentText: 'text-[#d46a7e]',
-        accentBg: 'bg-[#d46a7e]',
-        accentHover: 'hover:bg-[#c25a6e]',
-        border: 'border-[#d46a7e]/20',
-        green: '#4F6F52',
-        greenText: 'text-[#4F6F52]',
-        cardBg: 'bg-white',
-        cardBgLight: 'bg-white/50',
-      }
-
-  useEffect(() => {
-    const interval = setInterval(() => setCurrentStage((prev) => (prev + 1) % 5), 3000)
-    return () => clearInterval(interval)
-  }, [])
-
-  useEffect(() => {
-    fetch('/api/lp-stats')
-      .then(res => res.json())
-      .then(data => setStats(data))
-      .catch(() => {})
-  }, [])
+export default async function LandingPage() {
+  const stats = await getLPStats()
 
   return (
     <div className={`min-h-screen transition-colors duration-500 ${colors.bg} ${colors.text}`}>
@@ -191,7 +62,7 @@ export default function LandingPage() {
       <header className={`fixed top-0 left-0 right-0 z-50 ${colors.header} shadow-md transition-colors duration-500`}>
         <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
           <span className="font-serif text-lg tracking-wider text-white">
-            {isNight ? '🌙' : '☀️'} 究極の朝活
+            ☀️ 究極の朝活
           </span>
           <Link href="/login" className="px-6 py-2 bg-white/20 text-white text-sm tracking-wide hover:bg-white/30 rounded-lg transition-all duration-300">
             ログイン
@@ -219,7 +90,7 @@ export default function LandingPage() {
 
         <FadeInSection delay={800}>
           <div className="w-40 h-56 md:w-56 md:h-72 mb-8">
-            <GrowthTreeLP stage={currentStage} isNight={isNight} />
+            <AnimatedTree isNight={false} />
           </div>
         </FadeInSection>
 
@@ -379,7 +250,7 @@ export default function LandingPage() {
               <div className={`${colors.cardBg} rounded-3xl p-8 md:p-12 shadow-sm`}>
                 <div className="flex flex-col md:flex-row items-center gap-8">
                   <div className="w-32 h-40">
-                    <GrowthTreeLP stage={4} isNight={isNight} />
+                    <GrowthTreeLP stage={4} isNight={false} />
                   </div>
                   <div className="flex-1">
                     <h3 className={`font-serif text-xl md:text-2xl mb-4 ${colors.text}`}>

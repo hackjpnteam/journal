@@ -43,7 +43,7 @@ body {
 
 /* LP用明朝体フォント */
 .font-serif {
-  font-family: "Noto Serif JP", "Hiragino Mincho ProN", "Yu Mincho", serif;
+  font-family: var(--font-noto-serif-jp), "Hiragino Mincho ProN", "Yu Mincho", serif;
 }
 
 input[type="text"],

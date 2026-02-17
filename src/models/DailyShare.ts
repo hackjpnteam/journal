@@ -12,6 +12,8 @@ export interface IDailyShare extends Document {
   action?: string      // 今日これができたら「前に進んだ」と言える行動
   letGo?: string       // 今日、手放す思考・感情
   declaration: string  // 今日の宣言
+  promptQuestion?: string  // 今日のお題（質問）
+  promptAnswer?: string    // 今日のお題への回答
   createdAt: Date
   updatedAt: Date
 }
@@ -25,6 +27,8 @@ const DailyShareSchema = new Schema<IDailyShare>(
     action: { type: String },
     letGo: { type: String },
     declaration: { type: String, required: true },
+    promptQuestion: { type: String },
+    promptAnswer: { type: String },
   },
   { timestamps: true }
 )

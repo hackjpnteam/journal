@@ -13,6 +13,8 @@ const shareSchema = z.object({
   action: z.string().optional(),
   letGo: z.string().optional(),
   declaration: z.string().min(1, '宣言を入力してください'),
+  promptQuestion: z.string().optional(),
+  promptAnswer: z.string().optional(),
 })
 
 export async function GET(req: NextRequest) {
@@ -47,6 +49,8 @@ export async function GET(req: NextRequest) {
         action: s.action,
         letGo: s.letGo,
         declaration: s.declaration,
+        promptQuestion: s.promptQuestion,
+        promptAnswer: s.promptAnswer,
         createdAt: s.createdAt,
       })),
       myCoachingNote: myCoachingNote
@@ -70,7 +74,7 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json()
-    const { mood, value, action, letGo, declaration } = shareSchema.parse(body)
+    const { mood, value, action, letGo, declaration, promptQuestion, promptAnswer } = shareSchema.parse(body)
 
     await connectDB()
 
@@ -99,7 +103,9 @@ export async function POST(req: NextRequest) {
         value: value || undefined,
         action: action || undefined,
         letGo: letGo || undefined,
-        declaration
+        declaration,
+        promptQuestion: promptQuestion || undefined,
+        promptAnswer: promptAnswer || undefined
       },
       { upsert: true, new: true }
     )
