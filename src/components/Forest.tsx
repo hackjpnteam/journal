@@ -10,6 +10,7 @@ interface ForestUser {
   progress: number
   waterCount?: number
   weeklyWaterCount?: number
+  waterBonus?: number
 }
 
 interface ForestProps {
@@ -1006,6 +1007,9 @@ export function Forest({ users, currentUserId, weather = 'clear', isNight = fals
                 <p className="opacity-80">投稿数: {hoveredUser.postCount}</p>
                 {(hoveredUser.weeklyWaterCount || 0) > 0 && (
                   <p className="opacity-80">💧 今週: {hoveredUser.weeklyWaterCount}回</p>
+                )}
+                {(hoveredUser.waterBonus || 0) > 0 && (
+                  <p className="text-green-200">🌱 水やりボーナス: +{hoveredUser.waterBonus}%</p>
                 )}
                 {hoveredUser.userId !== currentUserId && !wateredByMeToday.includes(hoveredUser.userId) && (
                   <p className="text-cyan-200 mt-1 text-xs">タップして水やり 💧</p>

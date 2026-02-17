@@ -69,6 +69,7 @@ interface ForestUser {
   progress: number
   waterCount?: number
   weeklyWaterCount?: number
+  waterBonus?: number
 }
 
 type WeatherType = 'clear' | 'partly_cloudy' | 'cloudy' | 'rain' | 'drizzle' | 'snow' | 'thunderstorm' | 'fog'

@@ -71,6 +71,23 @@ export async function GET() {
     const todayStart = getTodayStartJST()
     const weekStart = getWeekStartJST()
 
+    // 今月の水やり数（ターゲットごと）→ 成長ボーナス計算用
+    const monthlyWaters = await TreeWater.aggregate([
+      {
+        $match: {
+          targetUserId: { $in: userIds },
+          createdAt: { $gte: thisMonthStart },
+        },
+      },
+      {
+        $group: {
+          _id: '$targetUserId',
+          count: { $sum: 1 },
+        },
+      },
+    ])
+    const monthlyWaterMap = new Map(monthlyWaters.map(w => [w._id.toString(), w.count]))
+
     // 今日の水やり数（ターゲットごと）
     const todayWaters = await TreeWater.aggregate([
       {
@@ -126,13 +143,17 @@ export async function GET() {
     const forest = users.map(user => {
       const uid = user._id.toString()
       const postCount = postCountMap.get(uid) || 0
-      const progress = Math.round((postCount / daysInMonth) * 100)
+      const baseProgress = Math.round((postCount / daysInMonth) * 100)
+      // 水やりボーナス: 3回もらうごとに+5%（最大+20%）
+      const monthlyWaterCount = monthlyWaterMap.get(uid) || 0
+      const waterBonus = Math.min(Math.floor(monthlyWaterCount / 3) * 5, 20)
       return {
         userId: uid,
         name: user.name,
         profileImage: user.profileImage || null,
         postCount,
-        progress: Math.min(progress, 100),
+        progress: Math.min(baseProgress + waterBonus, 100),
+        waterBonus,
         waterCount: todayWaterMap.get(uid) || 0,
         weeklyWaterCount: weeklyWaterMap.get(uid) || 0,
       }
