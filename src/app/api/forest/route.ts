@@ -158,12 +158,14 @@ async function getForestCommonData() {
 
 export async function GET() {
   try {
-    const session = await getServerSession(authOptions)
+    // connectDBとgetServerSessionを並列実行（独立しているため）
+    const [, session] = await Promise.all([
+      connectDB(),
+      getServerSession(authOptions),
+    ])
     if (!session?.user) {
       return NextResponse.json({ error: '認証が必要です' }, { status: 401 })
     }
-
-    await connectDB()
 
     // 共通データ（キャッシュ有効なら即返却）+ ユーザー固有データを並列取得
     const todayStart = getTodayStartJST()
